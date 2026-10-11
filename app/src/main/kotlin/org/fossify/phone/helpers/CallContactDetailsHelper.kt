@@ -24,9 +24,11 @@ import android.telephony.PhoneNumberUtils
 import android.text.SpannableStringBuilder
 import androidx.core.text.bold
 import androidx.core.text.buildSpannedString
+import org.fossify.commons.extensions.formatPhoneNumber
 import org.fossify.commons.extensions.getPhoneNumberTypeText
 import org.fossify.commons.models.contacts.Contact
 import org.fossify.phone.R
+import org.fossify.phone.extensions.config
 
 // every field Android stores for the matching contacts, notes first so they stay visible in a short panel
 private const val ORDER_PHONE = 0
@@ -116,7 +118,7 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
                     Phone.CONTENT_ITEM_TYPE -> {
                         val number = cursor.text(Phone.NUMBER)
                         val label = Phone.getTypeLabel(res, cursor.int(Phone.TYPE), cursor.text(Phone.LABEL))
-                        lines.add(DetailLine(ORDER_PHONE, "$label: $number", bold = PhoneNumberUtils.compare(number, callingNumber)))
+                        lines.add(DetailLine(ORDER_PHONE, "$label: ${formatNumber(context, number)}", bold = PhoneNumberUtils.compare(number, callingNumber)))
                     }
 
                     Email.CONTENT_ITEM_TYPE -> {
@@ -254,7 +256,7 @@ private fun getPrivateContactDetails(context: Context, contact: Contact, calling
         }
 
         contact.phoneNumbers.forEach { phoneNumber ->
-            val line = "\n${context.getPhoneNumberTypeText(phoneNumber.type, phoneNumber.label)}: ${phoneNumber.value}"
+            val line = "\n${context.getPhoneNumberTypeText(phoneNumber.type, phoneNumber.label)}: ${formatNumber(context, phoneNumber.value)}"
             if (PhoneNumberUtils.compare(phoneNumber.value, callingNumber)) {
                 bold { append(line) }
             } else {
@@ -267,6 +269,8 @@ private fun getPrivateContactDetails(context: Context, contact: Contact, calling
         contact.websites.forEach { append("\n$it") }
     }
 }
+
+private fun formatNumber(context: Context, number: String) = if (context.config.formatPhoneNumbers) number.formatPhoneNumber() else number
 
 private fun joinNonBlank(separator: String, vararg parts: String?) = parts.filterNotNull().filter { it.isNotBlank() }.joinToString(separator)
 

@@ -15,6 +15,7 @@ import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
+import org.fossify.commons.extensions.formatPhoneNumber
 import org.fossify.commons.extensions.launchActivityIntent
 import org.fossify.commons.extensions.telecomManager
 import org.fossify.commons.helpers.KEY_PHONE
@@ -45,12 +46,12 @@ fun Context.getAvailableSIMCardLabels(): List<SIMAccount> {
             var address = phoneAccount.address.toString()
             if (address.startsWith("tel:") && address.substringAfter("tel:").isNotEmpty()) {
                 address = Uri.decode(address.substringAfter("tel:"))
-                label += " ($address)"
+                label += " (${formatLineNumber(address)})"
             } else {
                 val subscriptionNumber = getSubscriptionPhoneNumber(account)
                 if (subscriptionNumber.isNotEmpty()) {
                     address = subscriptionNumber
-                    label += " ($address)"
+                    label += " (${formatLineNumber(address)})"
                 }
             }
 
@@ -68,6 +69,16 @@ fun Context.getAvailableSIMCardLabels(): List<SIMAccount> {
     }
 
     return simAccounts
+}
+
+// subscriptions often store NANP numbers as "15555550100", which formats as "1 555-555-0100" rather than the "+1 555-555-0100" of the caller line
+private fun Context.formatLineNumber(number: String): String {
+    if (!config.formatPhoneNumbers) {
+        return number
+    }
+
+    val isNanpWithoutPlus = number.length == 11 && number.startsWith("1") && number.all { it.isDigit() }
+    return (if (isNanpWithoutPlus) "+$number" else number).formatPhoneNumber()
 }
 
 // many carriers leave the phone account address empty, the subscription usually still knows the line number
