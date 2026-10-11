@@ -593,7 +593,7 @@ class CallActivity : SimpleActivity() {
         val isOnHold = CallManager.toggleHold()
         toggleButtonColor(binding.callToggleHold, isOnHold)
         binding.callToggleHold.contentDescription = getString(if (isOnHold) R.string.resume_call else R.string.hold_call)
-        binding.holdStatusLabel.beInvisibleIf(!isOnHold)
+        binding.holdStatusLabel.beGoneIf(!isOnHold)
     }
 
     private fun updateOtherPersonsInfo(avatarUri: String?) {
@@ -798,11 +798,14 @@ class CallActivity : SimpleActivity() {
         callDurationHandler.post(updateCallDurationTask)
     }
 
-    // keep the contact details on screen once the call is answered, in place of the avatar
+    // keep the contact details on screen once the call is answered, in place of the avatar,
+    // and give them more of the screen by packing the call controls into fewer rows
     private fun updateOngoingContactDetails() = binding.apply {
         val showDetails = hasCallStarted && ongoingContactDetails.text.isNotEmpty()
         ongoingContactDetailsHolder.beVisibleIf(showDetails)
         callerAvatar.beGoneIf(showDetails)
+        guideline.setGuidelinePercent(if (showDetails) 0.65f else 0.5f)
+        buttonGrid.setMaxElementsWrap(if (showDetails) 4 else 3)
     }
 
     private fun openCallerContact() {
