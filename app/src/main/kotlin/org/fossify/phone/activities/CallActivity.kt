@@ -62,6 +62,7 @@ class CallActivity : SimpleActivity() {
     private var isSpeakerOn = false
     private var isMicrophoneOff = false
     private var isCallEnded = false
+    private var hasCallStarted = false
     private var callContact: CallContact? = null
     private var proximityWakeLock: PowerManager.WakeLock? = null
     private var screenOnWakeLock: PowerManager.WakeLock? = null
@@ -624,6 +625,8 @@ class CallActivity : SimpleActivity() {
             val contactDetails = getContactDetailsText(matchingContacts, number)
             callerContactDetails.text = contactDetails
             callerContactDetailsHolder.beVisibleIf(contactDetails.isNotEmpty())
+            ongoingContactDetails.text = contactDetails
+            updateOngoingContactDetails()
 
             callerAvatar.apply {
                 if (avatarUri.isNullOrEmpty()) {
@@ -828,12 +831,21 @@ class CallActivity : SimpleActivity() {
     }
 
     private fun callStarted() {
+        hasCallStarted = true
+        updateOngoingContactDetails()
         enableProximitySensor()
         binding.incomingCallHolder.beGone()
         binding.ongoingCallHolder.beVisible()
         binding.callEnd.beVisible()
         callDurationHandler.removeCallbacks(updateCallDurationTask)
         callDurationHandler.post(updateCallDurationTask)
+    }
+
+    // keep the contact details on screen once the call is answered, in place of the avatar
+    private fun updateOngoingContactDetails() = binding.apply {
+        val showDetails = hasCallStarted && ongoingContactDetails.text.isNotEmpty()
+        ongoingContactDetailsHolder.beVisibleIf(showDetails)
+        callerAvatar.beGoneIf(showDetails)
     }
 
     private fun showPhoneAccountPicker() {
