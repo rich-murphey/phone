@@ -619,7 +619,7 @@ class CallActivity : SimpleActivity() {
             val primaryCallDetails = CallManager.getPrimaryCall()?.details
             val isIncoming = isQPlus() && primaryCallDetails?.callDirection == Call.Details.DIRECTION_INCOMING
             val calledAccount = getAvailableSIMCardLabels().firstOrNull { it.handle == primaryCallDetails?.accountHandle }
-            callDestination.text = calledAccount?.let { getString(R.string.called_line, it.label) }
+            callDestination.text = calledAccount?.let { getString(R.string.called_line, it.formattedNumber.ifEmpty { it.label }) }
             callDestination.beVisibleIf(isIncoming && calledAccount != null)
 
             callerContactDetails.text = contactDetails

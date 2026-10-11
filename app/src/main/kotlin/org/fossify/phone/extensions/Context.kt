@@ -44,14 +44,17 @@ fun Context.getAvailableSIMCardLabels(): List<SIMAccount> {
             val phoneAccount = telecomManager.getPhoneAccount(account)
             var label = phoneAccount.label.toString()
             var address = phoneAccount.address.toString()
+            var formattedNumber = ""
             if (address.startsWith("tel:") && address.substringAfter("tel:").isNotEmpty()) {
                 address = Uri.decode(address.substringAfter("tel:"))
-                label += " (${formatLineNumber(address)})"
+                formattedNumber = formatLineNumber(address)
+                label += " ($formattedNumber)"
             } else {
                 val subscriptionNumber = getSubscriptionPhoneNumber(account)
                 if (subscriptionNumber.isNotEmpty()) {
                     address = subscriptionNumber
-                    label += " (${formatLineNumber(address)})"
+                    formattedNumber = formatLineNumber(address)
+                    label += " ($formattedNumber)"
                 }
             }
 
@@ -61,7 +64,8 @@ fun Context.getAvailableSIMCardLabels(): List<SIMAccount> {
                     handle = phoneAccount.accountHandle,
                     label = label,
                     phoneNumber = address.substringAfter("tel:"),
-                    color = phoneAccount.highlightColor
+                    color = phoneAccount.highlightColor,
+                    formattedNumber = formattedNumber,
                 )
             )
         }

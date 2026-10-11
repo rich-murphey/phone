@@ -8,4 +8,5 @@ data class SIMAccount(
     val label: String,
     val phoneNumber: String,
     val color: Int,
+    val formattedNumber: String = "",
 )
