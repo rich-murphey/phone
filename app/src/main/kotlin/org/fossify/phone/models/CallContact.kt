@@ -10,4 +10,5 @@ data class CallContact(
     var numberLabel: String,
     var callerIdName: String = "",
     var matchingContacts: List<Contact> = emptyList(),
+    var contactDetails: CharSequence = "",
 )

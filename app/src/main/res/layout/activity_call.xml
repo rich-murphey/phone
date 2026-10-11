@@ -200,7 +200,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textDirection="firstStrongLtr"
-            android:textIsSelectable="true"
             android:textSize="@dimen/bigger_text_size"
             tools:text="Contact details" />
 
@@ -412,7 +411,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textDirection="firstStrongLtr"
-                android:textIsSelectable="true"
                 android:textSize="@dimen/bigger_text_size"
                 tools:text="Contact details" />
 

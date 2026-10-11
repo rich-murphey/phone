@@ -36,6 +36,8 @@
     <string name="caller_id_name">Caller ID: %s</string>
     <string name="called_line">To: %s</string>
     <string name="via_number">Via: %s</string>
+    <string name="contact_groups">Groups: %s</string>
+    <string name="contact_saved_in">Saved in: %s</string>
     <string name="bluetooth_device">Bluetooth: %s</string>
     <string name="dialing">Dialing…</string>
     <string name="call_ended">Call Ended</string>
