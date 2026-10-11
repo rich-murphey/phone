@@ -1,9 +1,11 @@
 package org.fossify.phone.activities
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.RippleDrawable
 import android.media.AudioManager
@@ -493,6 +495,7 @@ class CallActivity : SimpleActivity() {
                 }
             }
             toggleButtonColor(binding.callToggleSpeaker, enabled = route != AudioRoute.EARPIECE && route != AudioRoute.WIRED_HEADSET)
+            updateBluetoothDevice(supportedAudioRoutes.contains(AudioRoute.BLUETOOTH))
             createOrUpdateAudioRouteChooser(supportedAudioRoutes, create = false)
 
             if (isSpeakerOn) {
@@ -501,6 +504,21 @@ class CallActivity : SimpleActivity() {
                 enableProximitySensor()
             }
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun updateBluetoothDevice(bluetoothConnected: Boolean) {
+        val canReadName = !isSPlus() || checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        val deviceName = if (bluetoothConnected && isPiePlus() && canReadName) {
+            val audioState = CallManager.inCallService?.callAudioState
+            val device = audioState?.activeBluetoothDevice ?: audioState?.supportedBluetoothDevices?.firstOrNull()
+            device?.name.orEmpty()
+        } else {
+            ""
+        }
+
+        binding.callBluetoothDevice.text = getString(R.string.bluetooth_device, deviceName)
+        binding.callBluetoothDevice.beVisibleIf(deviceName.isNotEmpty())
     }
 
     private fun toggleMicrophone() {

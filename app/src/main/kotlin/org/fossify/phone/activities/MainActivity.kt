@@ -1,8 +1,10 @@
 package org.fossify.phone.activities
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.res.Configuration
 import android.graphics.drawable.Drawable
@@ -14,6 +16,7 @@ import android.provider.Settings
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.snackbar.Snackbar
 import me.grantland.widget.AutofitHelper
@@ -58,6 +61,8 @@ class MainActivity : SimpleActivity() {
     private var storedFontSize = 0
     private var storedStartNameWithSurname = false
     var cachedContacts = ArrayList<Contact>()
+
+    private val callerDetailsPermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -270,6 +275,26 @@ class MainActivity : SimpleActivity() {
     private fun checkContactPermissions() {
         handlePermission(PERMISSION_READ_CONTACTS) {
             initFragments()
+            requestCallerDetailsPermissions()
+        }
+    }
+
+    // own line numbers, Bluetooth headset name and the rest of the caller details shown on the call screen
+    private fun requestCallerDetailsPermissions() {
+        val permissions = mutableListOf(
+            Manifest.permission.READ_PHONE_NUMBERS,
+            Manifest.permission.READ_SMS,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.ACCESS_FINE_LOCATION,
+        )
+
+        if (isSPlus()) {
+            permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+        }
+
+        val missing = permissions.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+        if (missing.isNotEmpty()) {
+            callerDetailsPermissionsLauncher.launch(missing.toTypedArray())
         }
     }
 

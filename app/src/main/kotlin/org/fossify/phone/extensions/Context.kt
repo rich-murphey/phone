@@ -1,19 +1,26 @@
 package org.fossify.phone.extensions
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.KeyguardManager
 import android.content.Context
 import android.content.Context.KEYGUARD_SERVICE
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
 import android.os.PowerManager
+import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
+import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
 import org.fossify.commons.extensions.launchActivityIntent
 import org.fossify.commons.extensions.telecomManager
 import org.fossify.commons.helpers.KEY_PHONE
 import org.fossify.commons.helpers.ensureBackgroundThread
+import org.fossify.commons.helpers.isRPlus
+import org.fossify.commons.helpers.isTiramisuPlus
 import org.fossify.phone.helpers.Config
 import org.fossify.phone.models.SIMAccount
 
@@ -39,6 +46,12 @@ fun Context.getAvailableSIMCardLabels(): List<SIMAccount> {
             if (address.startsWith("tel:") && address.substringAfter("tel:").isNotEmpty()) {
                 address = Uri.decode(address.substringAfter("tel:"))
                 label += " ($address)"
+            } else {
+                val subscriptionNumber = getSubscriptionPhoneNumber(account)
+                if (subscriptionNumber.isNotEmpty()) {
+                    address = subscriptionNumber
+                    label += " ($address)"
+                }
             }
 
             simAccounts.add(
@@ -55,6 +68,27 @@ fun Context.getAvailableSIMCardLabels(): List<SIMAccount> {
     }
 
     return simAccounts
+}
+
+// many carriers leave the phone account address empty, the subscription usually still knows the line number
+@SuppressLint("MissingPermission")
+private fun Context.getSubscriptionPhoneNumber(handle: PhoneAccountHandle): String {
+    if (!isRPlus() || checkSelfPermission(Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED) {
+        return ""
+    }
+
+    val telephonyManager = getSystemService(TelephonyManager::class.java)
+    val subscriptionId = telephonyManager.getSubscriptionId(handle)
+    if (subscriptionId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
+        return ""
+    }
+
+    return if (isTiramisuPlus()) {
+        getSystemService(SubscriptionManager::class.java).getPhoneNumber(subscriptionId)
+    } else {
+        @Suppress("DEPRECATION")
+        telephonyManager.createForSubscriptionId(subscriptionId).line1Number.orEmpty()
+    }
 }
 
 @SuppressLint("MissingPermission")
