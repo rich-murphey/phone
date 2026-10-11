@@ -315,6 +315,37 @@
         android:visibility="gone"
         tools:visibility="gone">
 
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/incoming_guideline"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.5" />
+
+        <ScrollView
+            android:id="@+id/caller_contact_details_holder"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginHorizontal="@dimen/activity_margin"
+            android:layout_marginBottom="@dimen/activity_margin"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@+id/call_draggable_background"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/incoming_guideline"
+            tools:visibility="visible">
+
+            <org.fossify.commons.views.MyTextView
+                android:id="@+id/caller_contact_details"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textDirection="firstStrongLtr"
+                android:textIsSelectable="true"
+                android:textSize="@dimen/bigger_text_size"
+                tools:text="Contact details" />
+
+        </ScrollView>
+
         <ImageView
             android:id="@+id/call_decline"
             android:layout_width="@dimen/incoming_call_button_size"

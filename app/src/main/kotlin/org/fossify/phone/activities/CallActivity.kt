@@ -13,6 +13,8 @@ import android.os.Looper
 import android.os.PowerManager
 import android.telecom.Call
 import android.telecom.CallAudioState
+import android.telephony.PhoneNumberUtils
+import android.text.SpannableStringBuilder
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
@@ -22,6 +24,8 @@ import android.view.animation.OvershootInterpolator
 import android.widget.ImageView
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.os.postDelayed
+import androidx.core.text.bold
+import androidx.core.text.buildSpannedString
 import androidx.core.view.children
 import androidx.core.view.setPadding
 import androidx.core.view.updatePadding
@@ -30,6 +34,7 @@ import com.bumptech.glide.request.RequestOptions
 import org.fossify.commons.extensions.*
 import org.fossify.commons.helpers.*
 import org.fossify.commons.models.SimpleListItem
+import org.fossify.commons.models.contacts.Contact
 import org.fossify.phone.R
 import org.fossify.phone.databinding.ActivityCallBinding
 import org.fossify.phone.dialogs.DynamicBottomSheetChooserDialog
@@ -577,17 +582,28 @@ class CallActivity : SimpleActivity() {
         }
 
         binding.apply {
-            val (name, _, number, numberLabel) = callContact!!
+            val (name, _, number, numberLabel, callerIdName, matchingContacts) = callContact!!
             callerNameLabel.text = name.ifEmpty { getString(R.string.unknown_caller) }
+            val callerLines = mutableListOf<String>()
             if (number.isNotEmpty() && number != name) {
-                callerNumber.text = number
-
-                if (numberLabel.isNotEmpty()) {
-                    callerNumber.text = "$number - $numberLabel"
-                }
-            } else {
-                callerNumber.beGone()
+                callerLines.add(if (numberLabel.isNotEmpty()) "$number - $numberLabel" else number)
             }
+
+            if (callerIdName.isNotEmpty() && callerIdName != name) {
+                callerLines.add(getString(R.string.caller_id_name, callerIdName))
+            }
+
+            val calledAccount = getAvailableSIMCardLabels().firstOrNull { it.handle == CallManager.getPrimaryCall()?.details?.accountHandle }
+            if (calledAccount != null) {
+                callerLines.add(getString(R.string.called_line, calledAccount.label))
+            }
+
+            callerNumber.text = callerLines.joinToString("\n")
+            callerNumber.beVisibleIf(callerLines.isNotEmpty())
+
+            val contactDetails = getContactDetailsText(matchingContacts, number)
+            callerContactDetails.text = contactDetails
+            callerContactDetailsHolder.beVisibleIf(contactDetails.isNotEmpty())
 
             callerAvatar.apply {
                 if (avatarUri.isNullOrEmpty()) {
@@ -607,6 +623,48 @@ class CallActivity : SimpleActivity() {
                 }
             }
         }
+    }
+
+    private fun getContactDetailsText(contacts: List<Contact>, callingNumber: String): CharSequence {
+        val sections = contacts.map { contact ->
+            buildSpannedString {
+                val fullName = listOf(contact.prefix, contact.firstName, contact.middleName, contact.surname, contact.suffix)
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ")
+                    .ifEmpty { contact.getNameToDisplay() }
+                bold { append(fullName) }
+                if (contact.nickname.isNotEmpty()) {
+                    append(" \"${contact.nickname}\"")
+                }
+
+                val organization = listOf(contact.organization.jobPosition, contact.organization.company)
+                    .filter { it.isNotBlank() }
+                    .joinToString(", ")
+                if (organization.isNotEmpty()) {
+                    append("\n$organization")
+                }
+
+                contact.phoneNumbers.forEach { phoneNumber ->
+                    val line = "\n${getPhoneNumberTypeText(phoneNumber.type, phoneNumber.label)}: ${phoneNumber.value}"
+                    if (PhoneNumberUtils.compare(phoneNumber.value, callingNumber)) {
+                        bold { append(line) }
+                    } else {
+                        append(line)
+                    }
+                }
+
+                contact.emails.forEach { append("\n${it.value}") }
+                contact.addresses.forEach { append("\n${it.value}") }
+                contact.websites.forEach { append("\n$it") }
+
+                if (contact.notes.isNotBlank()) {
+                    append("\n\n${contact.notes.trim()}")
+                }
+            }
+        }
+
+        // the same person can be stored in several accounts, show identical entries once
+        return sections.distinctBy { it.toString() }.joinTo(SpannableStringBuilder(), "\n\n")
     }
 
     private fun getContactNameOrNumber(contact: CallContact): String {

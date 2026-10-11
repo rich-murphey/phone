@@ -33,6 +33,8 @@
     <string name="decline_call">Decline call</string>
     <string name="unknown_caller">Unknown Caller</string>
     <string name="is_calling">Is Calling…</string>
+    <string name="caller_id_name">Caller ID: %s</string>
+    <string name="called_line">To: %s</string>
     <string name="dialing">Dialing…</string>
     <string name="call_ended">Call Ended</string>
     <string name="call_ending">Call Ending</string>

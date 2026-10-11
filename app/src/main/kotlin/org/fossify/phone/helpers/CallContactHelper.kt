@@ -58,7 +58,10 @@ fun getCallContact(context: Context, call: Call?, callback: (CallContact) -> Uni
                     number
                 }
 
-                val contact = contacts.firstOrNull { it.doesHavePhoneNumber(number) }
+                callContact.callerIdName = call?.details?.callerDisplayName.orEmpty()
+                callContact.matchingContacts = contacts.filter { it.doesHavePhoneNumber(number) }
+
+                val contact = callContact.matchingContacts.firstOrNull()
                 if (contact != null) {
                     callContact.name = contact.getNameToDisplay()
                     callContact.photoUri = contact.photoUri
@@ -70,7 +73,7 @@ fun getCallContact(context: Context, call: Call?, callback: (CallContact) -> Uni
                         }
                     }
                 } else {
-                    callContact.name = callContact.number
+                    callContact.name = callContact.callerIdName.ifEmpty { callContact.number }
                 }
 
                 callback(callContact)
