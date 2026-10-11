@@ -185,6 +185,8 @@
 
     <ScrollView
         android:id="@+id/ongoing_contact_details_holder"
+        android:fadeScrollbars="false"
+        android:scrollbars="vertical"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginHorizontal="@dimen/activity_margin"
@@ -395,6 +397,8 @@
 
         <ScrollView
             android:id="@+id/caller_contact_details_holder"
+            android:fadeScrollbars="false"
+            android:scrollbars="vertical"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_marginHorizontal="@dimen/activity_margin"

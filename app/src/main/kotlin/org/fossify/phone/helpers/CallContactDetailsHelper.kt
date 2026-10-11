@@ -28,7 +28,7 @@ import org.fossify.commons.extensions.getPhoneNumberTypeText
 import org.fossify.commons.models.contacts.Contact
 import org.fossify.phone.R
 
-// every field Android stores for the matching contacts, in this order, with notes last
+// every field Android stores for the matching contacts, notes first so they stay visible in a short panel
 private const val ORDER_PHONE = 0
 private const val ORDER_EMAIL = 1
 private const val ORDER_ADDRESS = 2
@@ -204,6 +204,7 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
         }
 
         organizations.forEach { append("\n$it") }
+        notes.forEach { append("\n\n$it\n") }
         lines.sortedBy { it.order }.distinctBy { it.text }.forEach { line ->
             if (line.bold) {
                 bold { append("\n${line.text}") }
@@ -211,8 +212,6 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
                 append("\n${line.text}")
             }
         }
-
-        notes.forEach { append("\n\n$it") }
     }
 }
 
@@ -250,6 +249,10 @@ private fun getPrivateContactDetails(context: Context, contact: Contact, calling
             append("\n$organization")
         }
 
+        if (contact.notes.isNotBlank()) {
+            append("\n\n${contact.notes.trim()}\n")
+        }
+
         contact.phoneNumbers.forEach { phoneNumber ->
             val line = "\n${context.getPhoneNumberTypeText(phoneNumber.type, phoneNumber.label)}: ${phoneNumber.value}"
             if (PhoneNumberUtils.compare(phoneNumber.value, callingNumber)) {
@@ -262,10 +265,6 @@ private fun getPrivateContactDetails(context: Context, contact: Contact, calling
         contact.emails.forEach { append("\n${it.value}") }
         contact.addresses.forEach { append("\n${it.value}") }
         contact.websites.forEach { append("\n$it") }
-
-        if (contact.notes.isNotBlank()) {
-            append("\n\n${contact.notes.trim()}")
-        }
     }
 }
 
