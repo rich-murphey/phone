@@ -117,44 +117,43 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
 
                     Phone.CONTENT_ITEM_TYPE -> {
                         val number = cursor.text(Phone.NUMBER)
-                        val label = Phone.getTypeLabel(res, cursor.int(Phone.TYPE), cursor.text(Phone.LABEL))
-                        lines.add(DetailLine(ORDER_PHONE, "$label: ${formatNumber(context, number)}", bold = PhoneNumberUtils.compare(number, callingNumber)))
+                        val label = cursor.typeLabel(Phone.TYPE, Phone.LABEL, Phone.TYPE_CUSTOM) { type, label -> Phone.getTypeLabel(res, type, label) }
+                        lines.add(DetailLine(ORDER_PHONE, labeled(label, formatNumber(context, number)), bold = PhoneNumberUtils.compare(number, callingNumber)))
                     }
 
                     Email.CONTENT_ITEM_TYPE -> {
-                        val label = Email.getTypeLabel(res, cursor.int(Email.TYPE), cursor.text(Email.LABEL))
-                        lines.add(DetailLine(ORDER_EMAIL, "$label: ${cursor.text(Email.ADDRESS)}"))
+                        val label = cursor.typeLabel(Email.TYPE, Email.LABEL, Email.TYPE_CUSTOM) { type, label -> Email.getTypeLabel(res, type, label) }
+                        lines.add(DetailLine(ORDER_EMAIL, labeled(label, cursor.text(Email.ADDRESS))))
                     }
 
                     StructuredPostal.CONTENT_ITEM_TYPE -> {
-                        val label = StructuredPostal.getTypeLabel(res, cursor.int(StructuredPostal.TYPE), cursor.text(StructuredPostal.LABEL))
+                        val label = cursor.typeLabel(StructuredPostal.TYPE, StructuredPostal.LABEL, StructuredPostal.TYPE_CUSTOM) { type, label ->
+                            StructuredPostal.getTypeLabel(res, type, label)
+                        }
                         val address = cursor.text(StructuredPostal.FORMATTED_ADDRESS).lines().filter { it.isNotBlank() }.joinToString(", ")
-                        lines.add(DetailLine(ORDER_ADDRESS, "$label: $address"))
+                        lines.add(DetailLine(ORDER_ADDRESS, labeled(label, address)))
                     }
 
                     Im.CONTENT_ITEM_TYPE -> {
-                        val protocol = Im.getProtocolLabel(res, cursor.int(Im.PROTOCOL), cursor.text(Im.CUSTOM_PROTOCOL))
-                        lines.add(DetailLine(ORDER_IM, "$protocol: ${cursor.text(Im.DATA)}"))
+                        val protocol = cursor.typeLabel(Im.PROTOCOL, Im.CUSTOM_PROTOCOL, Im.PROTOCOL_CUSTOM) { type, label -> Im.getProtocolLabel(res, type, label) }
+                        lines.add(DetailLine(ORDER_IM, labeled(protocol, cursor.text(Im.DATA))))
                     }
 
                     SipAddress.CONTENT_ITEM_TYPE -> {
-                        val label = SipAddress.getTypeLabel(res, cursor.int(SipAddress.TYPE), cursor.text(SipAddress.LABEL))
-                        lines.add(DetailLine(ORDER_SIP, "SIP $label: ${cursor.text(SipAddress.SIP_ADDRESS)}"))
+                        val label = cursor.typeLabel(SipAddress.TYPE, SipAddress.LABEL, SipAddress.TYPE_CUSTOM) { type, label -> SipAddress.getTypeLabel(res, type, label) }
+                        lines.add(DetailLine(ORDER_SIP, labeled(joinNonBlank(" ", "SIP", label), cursor.text(SipAddress.SIP_ADDRESS))))
                     }
 
                     Relation.CONTENT_ITEM_TYPE -> {
-                        val label = Relation.getTypeLabel(res, cursor.int(Relation.TYPE), cursor.text(Relation.LABEL))
-                        lines.add(DetailLine(ORDER_RELATION, "$label: ${cursor.text(Relation.NAME)}"))
+                        val label = cursor.typeLabel(Relation.TYPE, Relation.LABEL, Relation.TYPE_CUSTOM) { type, label -> Relation.getTypeLabel(res, type, label) }
+                        lines.add(DetailLine(ORDER_RELATION, labeled(label, cursor.text(Relation.NAME))))
                     }
 
                     Event.CONTENT_ITEM_TYPE -> {
-                        val type = cursor.int(Event.TYPE)
-                        val label = if (type == Event.TYPE_CUSTOM) {
-                            cursor.text(Event.LABEL)
-                        } else {
-                            res.getString(Event.getTypeResource(type))
+                        val label = cursor.typeLabel(Event.TYPE, Event.LABEL, Event.TYPE_CUSTOM) { type, label ->
+                            if (type == Event.TYPE_CUSTOM) label else res.getString(Event.getTypeResource(type))
                         }
-                        lines.add(DetailLine(ORDER_EVENT, "$label: ${cursor.text(Event.START_DATE)}"))
+                        lines.add(DetailLine(ORDER_EVENT, labeled(label, cursor.text(Event.START_DATE))))
                     }
 
                     Website.CONTENT_ITEM_TYPE -> lines.add(DetailLine(ORDER_WEBSITE, cursor.text(Website.URL)))
@@ -256,7 +255,12 @@ private fun getPrivateContactDetails(context: Context, contact: Contact, calling
         }
 
         contact.phoneNumbers.forEach { phoneNumber ->
-            val line = "\n${context.getPhoneNumberTypeText(phoneNumber.type, phoneNumber.label)}: ${formatNumber(context, phoneNumber.value)}"
+            val label = if (phoneNumber.type == Phone.TYPE_CUSTOM && phoneNumber.label.isBlank()) {
+                ""
+            } else {
+                context.getPhoneNumberTypeText(phoneNumber.type, phoneNumber.label)
+            }
+            val line = "\n${labeled(label, formatNumber(context, phoneNumber.value))}"
             if (PhoneNumberUtils.compare(phoneNumber.value, callingNumber)) {
                 bold { append(line) }
             } else {
@@ -271,6 +275,15 @@ private fun getPrivateContactDetails(context: Context, contact: Contact, calling
 }
 
 private fun formatNumber(context: Context, number: String) = if (context.config.formatPhoneNumbers) number.formatPhoneNumber() else number
+
+// a custom type saved without a label would only say "Custom", leave the label out then
+private fun Cursor.typeLabel(typeColumn: String, labelColumn: String, customType: Int, getTypeLabel: (type: Int, label: String) -> CharSequence): String {
+    val type = int(typeColumn)
+    val label = text(labelColumn)
+    return if (type == customType && label.isBlank()) "" else getTypeLabel(type, label).toString()
+}
+
+private fun labeled(label: String, value: String) = if (label.isEmpty()) value else "$label: $value"
 
 private fun joinNonBlank(separator: String, vararg parts: String?) = parts.filterNotNull().filter { it.isNotBlank() }.joinToString(separator)
 
