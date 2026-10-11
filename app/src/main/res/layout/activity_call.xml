@@ -98,7 +98,7 @@
         android:layout_marginTop="@dimen/normal_margin"
         android:gravity="center_horizontal"
         android:textSize="@dimen/call_status_text_size"
-        app:layout_constraintBottom_toTopOf="@id/call_status_label"
+        app:layout_constraintBottom_toTopOf="@id/call_destination"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/caller_name_label"
@@ -112,10 +112,10 @@
         android:layout_marginTop="@dimen/normal_margin"
         android:alpha="0.8"
         android:textSize="@dimen/call_status_text_size"
-        app:layout_constraintBottom_toTopOf="@id/call_destination"
+        app:layout_constraintBottom_toTopOf="@id/hold_status_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/caller_number"
+        app:layout_constraintTop_toBottomOf="@+id/call_via_number"
         tools:text="Is Calling" />
 
     <org.fossify.commons.views.MyTextView
@@ -128,10 +128,10 @@
         android:textDirection="firstStrongLtr"
         android:textSize="@dimen/call_status_text_size"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/call_via_number"
+        app:layout_constraintBottom_toTopOf="@id/call_bluetooth_device"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/call_status_label"
+        app:layout_constraintTop_toBottomOf="@+id/caller_number"
         tools:text="To: T-Mobile (+1 555-555-0100)"
         tools:visibility="visible" />
 
@@ -145,10 +145,10 @@
         android:textDirection="firstStrongLtr"
         android:textSize="@dimen/call_status_text_size"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/hold_status_label"
+        app:layout_constraintBottom_toTopOf="@id/call_status_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/call_destination"
+        app:layout_constraintTop_toBottomOf="@+id/call_bluetooth_device"
         tools:text="Via: +1 555-555-0101"
         tools:visibility="visible" />
 
@@ -162,10 +162,10 @@
         android:textColor="@color/md_red"
         android:textSize="@dimen/call_status_text_size"
         android:visibility="invisible"
-        app:layout_constraintBottom_toTopOf="@id/call_bluetooth_device"
+        app:layout_constraintBottom_toTopOf="@id/ongoing_contact_details_holder"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/call_via_number"
+        app:layout_constraintTop_toBottomOf="@+id/call_status_label"
         tools:visibility="visible" />
 
     <org.fossify.commons.views.MyTextView
@@ -176,10 +176,10 @@
         android:alpha="0.8"
         android:textSize="@dimen/call_status_text_size"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/ongoing_contact_details_holder"
+        app:layout_constraintBottom_toTopOf="@id/call_via_number"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/hold_status_label"
+        app:layout_constraintTop_toBottomOf="@+id/call_destination"
         tools:text="Bluetooth: Headset"
         tools:visibility="visible" />
 
@@ -193,7 +193,7 @@
         app:layout_constraintBottom_toTopOf="@id/guideline"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/call_bluetooth_device">
+        app:layout_constraintTop_toBottomOf="@+id/hold_status_label">
 
         <org.fossify.commons.views.MyTextView
             android:id="@+id/ongoing_contact_details"
