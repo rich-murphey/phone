@@ -90,7 +90,9 @@ class Config(context: Context) : BaseConfig(context) {
         return REMEMBER_SIM_PREFIX + normalizeCustomSIMNumber(number)
     }
 
-    private fun normalizeCustomSIMNumber(number: String): String {
+    private fun normalizeCustomSIMNumber(number: String) = normalizeToE164(number)
+
+    fun normalizeToE164(number: String): String {
         val decoded = Uri.decode(number).removePrefix("tel:")
         val formatted = PhoneNumberUtils.formatNumberToE164(decoded, regionHint)
         return formatted ?: PhoneNumberUtils.normalizeNumber(decoded)

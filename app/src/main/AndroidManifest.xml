@@ -201,6 +201,14 @@
             android:enabled="true"
             android:exported="false" />
 
+        <receiver
+            android:name=".receivers.RingReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="org.murphey.smsweb.action.RING" />
+            </intent-filter>
+        </receiver>
+
         <activity-alias
             android:name=".activities.SplashActivity.Red"
             android:enabled="false"

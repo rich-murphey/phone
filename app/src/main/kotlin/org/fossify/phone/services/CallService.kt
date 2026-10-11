@@ -14,11 +14,19 @@ import org.fossify.phone.extensions.powerManager
 import org.fossify.phone.helpers.CallManager
 import org.fossify.phone.helpers.CallNotificationManager
 import org.fossify.phone.helpers.NoCall
+import org.fossify.phone.helpers.RingStore
 import org.fossify.phone.models.Events
 import org.greenrobot.eventbus.EventBus
 
 class CallService : InCallService() {
     private val callNotificationManager by lazy { CallNotificationManager(this) }
+    private var lowPriorityNotification = false
+
+    private val ringListener = {
+        if (CallManager.getState() == Call.STATE_RINGING) {
+            callNotificationManager.setupNotification(lowPriorityNotification)
+        }
+    }
 
     private val callListener = object : Call.Callback() {
         override fun onStateChanged(call: Call, state: Int) {
@@ -49,6 +57,8 @@ class CallService : InCallService() {
             else -> true
         }
 
+        lowPriorityNotification = lowPriority
+        RingStore.addListener(ringListener)
         callNotificationManager.setupNotification(lowPriority)
         if (
             lowPriority
@@ -72,6 +82,7 @@ class CallService : InCallService() {
         CallManager.onCallRemoved(call)
         if (CallManager.getPhoneState() == NoCall) {
             CallManager.inCallService = null
+            RingStore.removeListener(ringListener)
             callNotificationManager.cancelNotification()
         } else {
             callNotificationManager.setupNotification()
@@ -92,6 +103,7 @@ class CallService : InCallService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        RingStore.removeListener(ringListener)
         callNotificationManager.cancelNotification()
     }
 }

@@ -91,6 +91,7 @@ class CallActivity : SimpleActivity() {
         audioManager.mode = AudioManager.MODE_IN_CALL
         addLockScreenFlags()
         CallManager.addListener(callCallback)
+        RingStore.addListener(ringListener)
         updateCallContactInfo(CallManager.getPrimaryCall())
     }
 
@@ -107,6 +108,7 @@ class CallActivity : SimpleActivity() {
     override fun onDestroy() {
         super.onDestroy()
         CallManager.removeListener(callCallback)
+        RingStore.removeListener(ringListener)
         disableProximitySensor()
 
         if (screenOnWakeLock?.isHeld == true) {
@@ -734,9 +736,11 @@ class CallActivity : SimpleActivity() {
         updateViaNumber(CallManager.getPrimaryCall())
     }
 
-    // Telecom stores this extra as the call log's VIA_NUMBER
+    // Telecom stores this extra as the call log's VIA_NUMBER; forwarded VoIP.ms calls
+    // arrive without it, so fall back to the DID from a relayed ring
     private fun updateViaNumber(call: Call?) {
         val viaNumber = call?.details?.extras?.getString(Connection.EXTRA_CHILD_ADDRESS).orEmpty()
+            .ifEmpty { RingStore.getDidForCall(this, call).orEmpty() }
         val formattedViaNumber = if (config.formatPhoneNumbers) viaNumber.formatPhoneNumber() else viaNumber
         binding.callViaNumber.text = getString(R.string.via_number, formattedViaNumber)
         binding.callViaNumber.beVisibleIf(viaNumber.isNotEmpty())
@@ -888,6 +892,10 @@ class CallActivity : SimpleActivity() {
             updateCallContactInfo(call)
             updateState()
         }
+    }
+
+    private val ringListener = {
+        runOnUiThread { updateViaNumber(CallManager.getPrimaryCall()) }
     }
 
     private val updateCallDurationTask = object : Runnable {
