@@ -15,6 +15,7 @@ import android.os.Looper
 import android.os.PowerManager
 import android.telecom.Call
 import android.telecom.CallAudioState
+import android.telecom.Connection
 import android.telephony.PhoneNumberUtils
 import android.text.SpannableStringBuilder
 import android.view.KeyEvent
@@ -770,6 +771,15 @@ class CallActivity : SimpleActivity() {
         }
 
         updateCallAudioState(CallManager.getCallAudioRoute())
+        updateViaNumber(CallManager.getPrimaryCall())
+    }
+
+    // Telecom stores this extra as the call log's VIA_NUMBER
+    private fun updateViaNumber(call: Call?) {
+        val viaNumber = call?.details?.extras?.getString(Connection.EXTRA_CHILD_ADDRESS).orEmpty()
+        val formattedViaNumber = if (config.formatPhoneNumbers) viaNumber.formatPhoneNumber() else viaNumber
+        binding.callViaNumber.text = getString(R.string.via_number, formattedViaNumber)
+        binding.callViaNumber.beVisibleIf(viaNumber.isNotEmpty())
     }
 
     private fun updateCallOnHoldState(call: Call?) {
