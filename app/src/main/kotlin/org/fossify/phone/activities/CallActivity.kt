@@ -611,13 +611,14 @@ class CallActivity : SimpleActivity() {
                 callerLines.add(getString(R.string.caller_id_name, callerIdName))
             }
 
-            val calledAccount = getAvailableSIMCardLabels().firstOrNull { it.handle == CallManager.getPrimaryCall()?.details?.accountHandle }
-            if (calledAccount != null) {
-                callerLines.add(getString(R.string.called_line, calledAccount.label))
-            }
-
             callerNumber.text = callerLines.joinToString("\n")
             callerNumber.beVisibleIf(callerLines.isNotEmpty())
+
+            val primaryCallDetails = CallManager.getPrimaryCall()?.details
+            val isIncoming = isQPlus() && primaryCallDetails?.callDirection == Call.Details.DIRECTION_INCOMING
+            val calledAccount = getAvailableSIMCardLabels().firstOrNull { it.handle == primaryCallDetails?.accountHandle }
+            callDestination.text = calledAccount?.let { getString(R.string.called_line, it.label) }
+            callDestination.beVisibleIf(isIncoming && calledAccount != null)
 
             val contactDetails = getContactDetailsText(matchingContacts, number)
             callerContactDetails.text = contactDetails
