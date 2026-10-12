@@ -30,7 +30,7 @@ import org.fossify.commons.models.contacts.Contact
 import org.fossify.phone.R
 import org.fossify.phone.extensions.config
 
-// every field Android stores for the matching contacts, notes first so they stay visible in a short panel
+// every field Android stores for the matching contacts, notes last
 private const val ORDER_PHONE = 0
 private const val ORDER_EMAIL = 1
 private const val ORDER_ADDRESS = 2
@@ -40,9 +40,14 @@ private const val ORDER_RELATION = 5
 private const val ORDER_EVENT = 6
 private const val ORDER_WEBSITE = 7
 private const val ORDER_IDENTITY = 8
-private const val ORDER_OTHER = 9
-private const val ORDER_GROUPS = 10
-private const val ORDER_ACCOUNTS = 11
+private const val ORDER_CUSTOM = 9
+private const val ORDER_OTHER = 10
+private const val ORDER_GROUPS = 11
+private const val ORDER_ACCOUNTS = 12
+
+// rows Google's contacts sync adapter adds for fields Android has no type for
+private const val GOOGLE_USER_DEFINED_FIELD = "vnd.com.google.cursor.item/contact_user_defined_field"
+private const val GOOGLE_MISC = "vnd.com.google.cursor.item/contact_misc"
 
 private class DetailLine(val order: Int, val text: String, val bold: Boolean = false)
 
@@ -130,8 +135,22 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
                         val label = cursor.typeLabel(StructuredPostal.TYPE, StructuredPostal.LABEL, StructuredPostal.TYPE_CUSTOM) { type, label ->
                             StructuredPostal.getTypeLabel(res, type, label)
                         }
+                        // Google sync leaves FORMATTED_ADDRESS empty for about half the addresses, build those from the parts
                         val address = cursor.text(StructuredPostal.FORMATTED_ADDRESS).lines().filter { it.isNotBlank() }.joinToString(", ")
-                        lines.add(DetailLine(ORDER_ADDRESS, labeled(label, address)))
+                            .ifEmpty {
+                                joinNonBlank(
+                                    ", ",
+                                    cursor.text(StructuredPostal.STREET).lines().filter { it.isNotBlank() }.joinToString(", "),
+                                    cursor.text(StructuredPostal.POBOX),
+                                    cursor.text(StructuredPostal.NEIGHBORHOOD),
+                                    cursor.text(StructuredPostal.CITY),
+                                    joinNonBlank(" ", cursor.text(StructuredPostal.REGION), cursor.text(StructuredPostal.POSTCODE)),
+                                    cursor.text(StructuredPostal.COUNTRY)
+                                )
+                            }
+                        if (address.isNotEmpty()) {
+                            lines.add(DetailLine(ORDER_ADDRESS, labeled(label, address)))
+                        }
                     }
 
                     Im.CONTENT_ITEM_TYPE -> {
@@ -170,6 +189,17 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
 
                     Photo.CONTENT_ITEM_TYPE -> {}
 
+                    // DATA1 is the field's label, DATA2 its value
+                    GOOGLE_USER_DEFINED_FIELD -> {
+                        val value = cursor.text(Data.DATA2)
+                        if (value.isNotBlank()) {
+                            lines.add(DetailLine(ORDER_CUSTOM, labeled(cursor.text(Data.DATA1), value)))
+                        }
+                    }
+
+                    // DATA7 is the occupation; initials (DATA4) and a numeric flag (DATA3) are left out
+                    GOOGLE_MISC -> cursor.text(Data.DATA7).takeIf { it.isNotBlank() }?.let { organizations.add(it) }
+
                     // rows added by other apps (WhatsApp, Signal, ...) keep a human readable summary in DATA3
                     else -> {
                         val summary = cursor.text(Data.DATA3).ifBlank { cursor.text(Data.DATA2) }.ifBlank { cursor.text(Data.DATA1) }
@@ -205,7 +235,6 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
         }
 
         organizations.forEach { append("\n$it") }
-        notes.forEach { append("\n\n$it\n") }
         lines.sortedBy { it.order }.distinctBy { it.text }.forEach { line ->
             if (line.bold) {
                 bold { append("\n${line.text}") }
@@ -213,6 +242,7 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
                 append("\n${line.text}")
             }
         }
+        notes.forEach { append("\n\n$it") }
     }
 }
 
@@ -250,10 +280,6 @@ private fun getPrivateContactDetails(context: Context, contact: Contact, calling
             append("\n$organization")
         }
 
-        if (contact.notes.isNotBlank()) {
-            append("\n\n${contact.notes.trim()}\n")
-        }
-
         contact.phoneNumbers.forEach { phoneNumber ->
             val label = if (phoneNumber.type == Phone.TYPE_CUSTOM && phoneNumber.label.isBlank()) {
                 ""
@@ -271,6 +297,9 @@ private fun getPrivateContactDetails(context: Context, contact: Contact, calling
         contact.emails.forEach { append("\n${it.value}") }
         contact.addresses.forEach { append("\n${it.value}") }
         contact.websites.forEach { append("\n$it") }
+        if (contact.notes.isNotBlank()) {
+            append("\n\n${contact.notes.trim()}")
+        }
     }
 }
 
