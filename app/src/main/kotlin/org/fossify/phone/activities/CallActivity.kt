@@ -703,11 +703,14 @@ class CallActivity : SimpleActivity() {
     // Telecom stores EXTRA_CHILD_ADDRESS as the call log's VIA_NUMBER; forwarded VoIP.ms calls
     // arrive without it, so fall back to the DID from a relayed ring
     private fun updateCallDestination(call: Call?) {
+        val ring = RingStore.getRingForCall(this, call)
         val viaNumber = call?.details?.extras?.getString(Connection.EXTRA_CHILD_ADDRESS).orEmpty()
-            .ifEmpty { RingStore.getDidForCall(this, call).orEmpty() }
+            .ifEmpty { ring?.did.orEmpty() }
         if (viaNumber.isNotEmpty()) {
             val formattedViaNumber = if (config.formatPhoneNumbers) viaNumber.formatPhoneNumber() else viaNumber
-            binding.callDestination.text = getString(R.string.via_number, formattedViaNumber)
+            val lineType = listOf(ring?.lineType.orEmpty(), ring?.carrier.orEmpty()).filter { it.isNotEmpty() }.joinToString(", ")
+            binding.callDestination.text = getString(R.string.via_number, formattedViaNumber) +
+                if (lineType.isNotEmpty()) "\n" + getString(R.string.caller_line_type, lineType) else ""
             binding.callDestination.beVisible()
             return
         }

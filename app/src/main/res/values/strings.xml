@@ -36,6 +36,7 @@
     <string name="caller_id_name">Caller ID: %s</string>
     <string name="called_line">To: %s</string>
     <string name="via_number">Via: %s</string>
+    <string name="caller_line_type">Line: %s</string>
     <string name="contact_labels">Labels: %s</string>
     <string name="screening_filter">Filter: %s</string>
     <string name="contact_saved_in">Saved in: %s</string>
