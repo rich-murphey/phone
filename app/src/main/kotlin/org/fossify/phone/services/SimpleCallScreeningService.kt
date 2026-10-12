@@ -19,7 +19,7 @@ class SimpleCallScreeningService : CallScreeningService() {
                 respondToCall(callDetails, isBlocked = true)
             }
 
-            isIncoming(callDetails) && !CallScreening.allows(this, callDetails.accountHandle, number) -> {
+            isIncoming(callDetails) && !CallScreening.allows(this, CallScreening.getRingingLine(this), number) -> {
                 // declined, so T-Mobile hands it to the line's busy forwarding (a VoIP.ms voicemail
                 // number); kept in the call log so turned-away callers can be seen
                 val response = CallResponse.Builder()

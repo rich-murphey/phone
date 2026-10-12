@@ -1,5 +1,6 @@
 package org.fossify.phone.helpers
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract.CommonDataKinds.GroupMembership
@@ -7,6 +8,10 @@ import android.provider.ContactsContract.Data
 import android.provider.ContactsContract.Groups
 import android.provider.ContactsContract.PhoneLookup
 import android.telecom.PhoneAccountHandle
+import android.telephony.SubscriptionManager
+import android.telephony.TelephonyManager
+import org.fossify.commons.extensions.telecomManager
+import org.fossify.commons.helpers.isSPlus
 import org.fossify.phone.R
 import org.fossify.phone.extensions.config
 
@@ -27,6 +32,26 @@ object CallScreening {
         // a contacts provider failure lets the call ring rather than turning family away
         val labels = getCallerLabels(context, number) ?: return true
         return labels.any { it in allowed }
+    }
+
+    // Telecom hands screening services the call without its PhoneAccountHandle, so take the line
+    // from the SIM subscription that is ringing
+    @SuppressLint("MissingPermission")
+    fun getRingingLine(context: Context): PhoneAccountHandle? {
+        if (!isSPlus()) {
+            return null
+        }
+
+        return try {
+            val telephonyManager = context.getSystemService(TelephonyManager::class.java)
+            context.telecomManager.callCapablePhoneAccounts.firstOrNull { handle ->
+                val subId = telephonyManager.getSubscriptionId(handle)
+                subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID &&
+                    telephonyManager.createForSubscriptionId(subId).callStateForSubscription == TelephonyManager.CALL_STATE_RINGING
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun getLevelText(context: Context, level: Int): String {

@@ -13,6 +13,7 @@ import org.fossify.phone.extensions.keyguardManager
 import org.fossify.phone.extensions.powerManager
 import org.fossify.phone.helpers.CallManager
 import org.fossify.phone.helpers.CallNotificationManager
+import org.fossify.phone.helpers.CallScreening
 import org.fossify.phone.helpers.NoCall
 import org.fossify.phone.helpers.RingStore
 import org.fossify.phone.models.Events
@@ -41,6 +42,12 @@ class CallService : InCallService() {
 
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
+        // backstop for a call the screening service let through without knowing its line
+        if (!call.isOutgoing() && !CallScreening.allows(this, call.details.accountHandle, call.details.handle?.schemeSpecificPart)) {
+            call.reject(false, null)
+            return
+        }
+
         CallManager.onCallAdded(call)
         CallManager.inCallService = this
         call.registerCallback(callListener)
