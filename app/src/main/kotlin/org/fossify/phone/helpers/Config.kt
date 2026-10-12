@@ -137,4 +137,15 @@ class Config(context: Context) : BaseConfig(context) {
     var alwaysShowFullscreen: Boolean
         get() = prefs.getBoolean(ALWAYS_SHOW_FULLSCREEN, false)
         set(alwaysShowFullscreen) = prefs.edit().putBoolean(ALWAYS_SHOW_FULLSCREEN, alwaysShowFullscreen).apply()
+
+    // one contact label per screening level, "" for an unused level
+    var screeningLabels: List<String>
+        get() = prefs.getString(SCREENING_LABELS, null)?.split("\n")
+            ?: listOf("Family", "Starred in Android", "", "My Contacts")
+        set(screeningLabels) = prefs.edit().putString(SCREENING_LABELS, screeningLabels.joinToString("\n")).apply()
+
+    fun getScreeningLevel(handle: PhoneAccountHandle) = prefs.getInt(SCREENING_LEVEL_PREFIX + handle.id, 0)
+
+    fun setScreeningLevel(handle: PhoneAccountHandle, level: Int) =
+        prefs.edit().putInt(SCREENING_LEVEL_PREFIX + handle.id, level).apply()
 }

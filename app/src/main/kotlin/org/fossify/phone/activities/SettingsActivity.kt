@@ -1,5 +1,6 @@
 package org.fossify.phone.activities
 
+import android.app.role.RoleManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -39,8 +40,12 @@ import org.fossify.phone.dialogs.ExportCallHistoryDialog
 import org.fossify.phone.dialogs.ManageVisibleTabsDialog
 import org.fossify.phone.extensions.canLaunchAccountsConfiguration
 import org.fossify.phone.extensions.config
+import org.fossify.phone.extensions.getAvailableSIMCardLabels
 import org.fossify.phone.extensions.launchAccountsConfiguration
+import org.fossify.phone.helpers.CallScreening
 import org.fossify.phone.helpers.RecentsHelper
+import org.fossify.phone.helpers.SCREENING_LEVELS
+import org.fossify.phone.models.SIMAccount
 import org.fossify.phone.models.RecentCall
 import java.util.Locale
 import kotlin.system.exitProcess
@@ -75,6 +80,8 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
+    private val requestScreeningRole = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
@@ -102,6 +109,7 @@ class SettingsActivity : SimpleActivity() {
         setupDefaultTab()
         setupOnContactClick()
         setupDialPadOpen()
+        setupCallScreening()
         setupGroupSubsequentCalls()
         setupStartNameWithSurname()
         setupFormatPhoneNumbers()
@@ -283,6 +291,75 @@ class SettingsActivity : SimpleActivity() {
                 settingsOpenDialpadAtLaunch.toggle()
                 config.openDialPadAtLaunch = settingsOpenDialpadAtLaunch.isChecked
             }
+        }
+    }
+
+    private fun setupCallScreening() {
+        val lines = getAvailableSIMCardLabels()
+        binding.settingsCallScreening.text = lines.joinToString("\n") { "${it.label}: ${getScreeningLevelText(config.getScreeningLevel(it.handle))}" }
+        binding.settingsCallScreeningHolder.setOnClickListener {
+            val items = ArrayList(lines.mapIndexed { index, line -> RadioItem(index, line.label, line) })
+            items.add(RadioItem(lines.size, getString(R.string.screening_level_labels)))
+            RadioGroupDialog(this, items) {
+                if (it is SIMAccount) pickScreeningLevel(it) else pickScreeningLevelToLabel()
+            }
+        }
+    }
+
+    private fun getScreeningLevelText(level: Int): String {
+        if (level == 0) {
+            return getString(R.string.screening_everyone)
+        }
+
+        val labels = config.screeningLabels.take(level).filter { it.isNotEmpty() }
+        return getString(R.string.screening_level, level, labels.joinToString(", ").ifEmpty { getString(R.string.screening_no_label) })
+    }
+
+    private fun pickScreeningLevel(line: SIMAccount) {
+        val items = ArrayList((0..SCREENING_LEVELS).map { RadioItem(it, getScreeningLevelText(it)) })
+        RadioGroupDialog(this, items, config.getScreeningLevel(line.handle)) {
+            config.setScreeningLevel(line.handle, it as Int)
+            if (it > 0) {
+                requestScreeningRoleIfNeeded()
+            }
+            setupCallScreening()
+        }
+    }
+
+    private fun pickScreeningLevelToLabel() {
+        val labels = config.screeningLabels
+        val items = ArrayList((1..SCREENING_LEVELS).map {
+            RadioItem(it, getString(R.string.screening_level, it, labels.getOrElse(it - 1) { "" }.ifEmpty { getString(R.string.screening_no_label) }))
+        })
+        RadioGroupDialog(this, items) { level ->
+            pickScreeningLabel(level as Int)
+        }
+    }
+
+    private fun pickScreeningLabel(level: Int) {
+        val titles = listOf("") + CallScreening.getLabelTitles(this)
+        val current = config.screeningLabels.getOrElse(level - 1) { "" }
+        val items = ArrayList(titles.mapIndexed { index, title -> RadioItem(index, title.ifEmpty { getString(R.string.screening_no_label) }, title) })
+        RadioGroupDialog(this, items, titles.indexOf(current)) {
+            val labels = config.screeningLabels.toMutableList()
+            while (labels.size < SCREENING_LEVELS) {
+                labels.add("")
+            }
+            labels[level - 1] = it as String
+            config.screeningLabels = labels
+            setupCallScreening()
+        }
+    }
+
+    // screening runs in whichever app holds the role, which Samsung's Phone app holds by default
+    private fun requestScreeningRoleIfNeeded() {
+        if (!isQPlus()) {
+            return
+        }
+
+        val roleManager = getSystemService(RoleManager::class.java)
+        if (roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING) && !roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)) {
+            requestScreeningRole.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
         }
     }
 

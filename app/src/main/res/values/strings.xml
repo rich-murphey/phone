@@ -98,6 +98,11 @@
     <string name="export_call_history">Export call history</string>
     <string name="import_call_history">Import call history</string>
     <string name="calling_accounts">Calling accounts</string>
+    <string name="call_screening">Ring only for callers with these labels</string>
+    <string name="screening_level_labels">Labels for each level</string>
+    <string name="screening_everyone">Everyone</string>
+    <string name="screening_level">Level %1$d: %2$s</string>
+    <string name="screening_no_label">no label</string>
 
     <!-- FAQ -->
     <string name="faq_1_title">I hear incoming calls, but the screen doesn\'t turn on. What can I do?</string>

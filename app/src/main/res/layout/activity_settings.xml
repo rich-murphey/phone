@@ -296,6 +296,28 @@
                 android:text="@string/calls" />
 
             <RelativeLayout
+                android:id="@+id/settings_call_screening_holder"
+                style="@style/SettingsHolderTextViewStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_call_screening_label"
+                    style="@style/SettingsTextLabelStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/call_screening" />
+
+                <org.fossify.commons.views.MyTextView
+                    android:id="@+id/settings_call_screening"
+                    style="@style/SettingsTextValueStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/settings_call_screening_label" />
+
+            </RelativeLayout>
+
+            <RelativeLayout
                 android:id="@+id/settings_group_subsequent_calls_holder"
                 style="@style/SettingsHolderSwitchStyle"
                 android:layout_width="match_parent"
