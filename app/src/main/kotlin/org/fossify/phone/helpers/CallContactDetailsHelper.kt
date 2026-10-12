@@ -20,6 +20,9 @@ import android.provider.ContactsContract.CommonDataKinds.Website
 import android.provider.ContactsContract.Data
 import android.provider.ContactsContract.Groups
 import android.provider.ContactsContract.RawContacts
+import android.provider.CallLog.Calls
+import android.provider.Telephony.Sms
+import android.text.format.DateUtils
 import android.telephony.PhoneNumberUtils
 import android.text.SpannableStringBuilder
 import androidx.core.text.bold
@@ -53,7 +56,9 @@ private class DetailLine(val order: Int, val text: String, val bold: Boolean = f
 
 fun getContactDetailsText(context: Context, contacts: List<Contact>, callingNumber: String): CharSequence {
     val deviceContactIds = contacts.filter { !it.isPrivate() }.map { it.contactId }.distinct()
-    val sections = deviceContactIds.map { getDeviceContactDetails(context, it, callingNumber) } +
+    val numbers = (contacts.flatMap { contact -> contact.phoneNumbers.map { it.value } } + callingNumber).filter { it.isNotBlank() }.distinct()
+    val sections = listOf(getHistory(context, numbers)) +
+        deviceContactIds.map { getDeviceContactDetails(context, it, callingNumber) } +
         contacts.filter { it.isPrivate() }.map { getPrivateContactDetails(context, it, callingNumber) }
 
     // the same person can be stored in several places, show identical entries once
@@ -177,7 +182,8 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
 
                     Website.CONTENT_ITEM_TYPE -> lines.add(DetailLine(ORDER_WEBSITE, cursor.text(Website.URL)))
 
-                    Identity.CONTENT_ITEM_TYPE -> {
+                    // Google sync stores the contact's Google profile id here, an opaque number
+                    Identity.CONTENT_ITEM_TYPE -> if (cursor.text(Identity.NAMESPACE) != "com.google") {
                         val namespace = cursor.text(Identity.NAMESPACE)
                         val identity = cursor.text(Identity.IDENTITY)
                         lines.add(DetailLine(ORDER_IDENTITY, if (namespace.isNotEmpty()) "$namespace: $identity" else identity))
@@ -245,6 +251,57 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
         notes.forEach { append("\n\n$it") }
     }
 }
+
+// the last call and the last two SMS with any of the person's numbers, unknown callers included
+private fun getHistory(context: Context, numbers: List<String>): CharSequence {
+    if (numbers.isEmpty()) {
+        return ""
+    }
+
+    val selection = numbers.joinToString(" OR ") { "PHONE_NUMBERS_EQUAL(%s, ?, 0)" }
+    val args = numbers.toTypedArray()
+    val lines = mutableListOf<String>()
+    try {
+        context.contentResolver.query(
+            Calls.CONTENT_URI, arrayOf(Calls.DATE, Calls.TYPE, Calls.DURATION), selection.format(*Array(numbers.size) { Calls.NUMBER }), args,
+            "${Calls.DATE} DESC LIMIT 1"
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val duration = cursor.int(Calls.DURATION)
+                val kind = when (cursor.int(Calls.TYPE)) {
+                    Calls.INCOMING_TYPE -> context.getString(R.string.last_call_incoming)
+                    Calls.OUTGOING_TYPE -> context.getString(R.string.last_call_outgoing)
+                    Calls.MISSED_TYPE -> context.getString(R.string.last_call_missed)
+                    Calls.REJECTED_TYPE -> context.getString(R.string.last_call_rejected)
+                    Calls.BLOCKED_TYPE -> context.getString(R.string.last_call_blocked)
+                    Calls.VOICEMAIL_TYPE -> context.getString(R.string.last_call_voicemail)
+                    else -> ""
+                }
+                val details = joinNonBlank(", ", kind, if (duration > 0) DateUtils.formatElapsedTime(duration.toLong()) else "")
+                lines.add(context.getString(R.string.last_call, formatDate(context, cursor.long(Calls.DATE)), details))
+            }
+        }
+    } catch (ignored: Exception) {
+    }
+
+    try {
+        context.contentResolver.query(
+            Sms.CONTENT_URI, arrayOf(Sms.DATE, Sms.TYPE, Sms.BODY), selection.format(*Array(numbers.size) { Sms.ADDRESS }), args,
+            "${Sms.DATE} DESC LIMIT 2"
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val textId = if (cursor.int(Sms.TYPE) == Sms.MESSAGE_TYPE_INBOX) R.string.text_received else R.string.text_sent
+                lines.add(context.getString(textId, formatDate(context, cursor.long(Sms.DATE)), cursor.text(Sms.BODY).trim()))
+            }
+        }
+    } catch (ignored: Exception) {
+    }
+
+    return lines.joinToString("\n")
+}
+
+private fun formatDate(context: Context, millis: Long) =
+    DateUtils.formatDateTime(context, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH)
 
 // user created groups only, system groups like "My Contacts" say nothing about the person
 private fun getGroupTitles(context: Context, groupIds: Collection<Long>): List<String> {
@@ -319,6 +376,11 @@ private fun joinNonBlank(separator: String, vararg parts: String?) = parts.filte
 private fun Cursor.text(column: String): String {
     val index = getColumnIndex(column)
     return if (index == -1) "" else getString(index).orEmpty()
+}
+
+private fun Cursor.long(column: String): Long {
+    val index = getColumnIndex(column)
+    return if (index == -1 || isNull(index)) 0 else getLong(index)
 }
 
 private fun Cursor.int(column: String): Int {

@@ -38,6 +38,15 @@
     <string name="via_number">Via: %s</string>
     <string name="contact_groups">Groups: %s</string>
     <string name="contact_saved_in">Saved in: %s</string>
+    <string name="last_call">Last call: %1$s, %2$s</string>
+    <string name="last_call_incoming">incoming</string>
+    <string name="last_call_outgoing">outgoing</string>
+    <string name="last_call_missed">missed</string>
+    <string name="last_call_rejected">declined</string>
+    <string name="last_call_blocked">blocked</string>
+    <string name="last_call_voicemail">voicemail</string>
+    <string name="text_received">Received %1$s: %2$s</string>
+    <string name="text_sent">Sent %1$s: %2$s</string>
     <string name="bluetooth_device">Bluetooth: %s</string>
     <string name="dialing">Dialing…</string>
     <string name="call_ended">Call Ended</string>
