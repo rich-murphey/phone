@@ -28,10 +28,7 @@ import android.widget.ImageView
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.os.postDelayed
 import androidx.core.view.children
-import androidx.core.view.setPadding
 import androidx.core.view.updatePadding
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.RequestOptions
 import org.fossify.commons.extensions.*
 import org.fossify.commons.helpers.*
 import org.fossify.commons.models.SimpleListItem
@@ -194,7 +191,6 @@ class CallActivity : SimpleActivity() {
             endCall()
         }
 
-        callerContactDetails.setOnClickListener { openCallerContact() }
         ongoingContactDetails.setOnClickListener { openCallerContact() }
 
         dialpadInclude.apply {
@@ -598,7 +594,7 @@ class CallActivity : SimpleActivity() {
         binding.holdStatusLabel.beGoneIf(!isOnHold)
     }
 
-    private fun updateOtherPersonsInfo(avatarUri: String?) {
+    private fun updateOtherPersonsInfo() {
         if (callContact == null) {
             return
         }
@@ -618,34 +614,10 @@ class CallActivity : SimpleActivity() {
             callerNumber.text = callerLines.joinToString("\n")
             callerNumber.beVisibleIf(callerLines.isNotEmpty())
 
-            val primaryCallDetails = CallManager.getPrimaryCall()?.details
-            val isIncoming = isQPlus() && primaryCallDetails?.callDirection == Call.Details.DIRECTION_INCOMING
-            val calledAccount = getAvailableSIMCardLabels().firstOrNull { it.handle == primaryCallDetails?.accountHandle }
-            callDestination.text = calledAccount?.let { getString(R.string.called_line, it.formattedNumber.ifEmpty { it.label }) }
-            callDestination.beVisibleIf(isIncoming && calledAccount != null)
+            updateCallDestination(CallManager.getPrimaryCall())
 
-            callerContactDetails.text = contactDetails
-            callerContactDetailsHolder.beVisibleIf(contactDetails.isNotEmpty())
             ongoingContactDetails.text = contactDetails
             updateOngoingContactDetails()
-
-            callerAvatar.apply {
-                if (avatarUri.isNullOrEmpty()) {
-                    val bgColor = getProperPrimaryColor()
-                    setBackgroundResource(R.drawable.circle_background)
-                    setImageResource(R.drawable.ic_person_vector)
-                    setPadding(resources.getDimensionPixelSize(R.dimen.activity_margin))
-                    applyColorFilter(bgColor.getContrastColor())
-                    background.applyColorFilter(bgColor)
-                } else {
-                    if (!isFinishing && !isDestroyed) {
-                        Glide.with(this)
-                            .load(avatarUri)
-                            .apply(RequestOptions.circleCropTransform())
-                            .into(this)
-                    }
-                }
-            }
         }
     }
 
@@ -664,15 +636,6 @@ class CallActivity : SimpleActivity() {
             if (simLabels.size > 1) {
                 simLabels.forEachIndexed { index, sim ->
                     if (sim.handle == CallManager.getPrimaryCall()?.details?.accountHandle) {
-                        binding.apply {
-                            callSimId.text = sim.id.toString()
-                            callSimId.beVisible()
-                            callSimImage.beVisible()
-                            val simColor = sim.color.adjustForContrast(getProperBackgroundColor())
-                            callSimId.setTextColor(simColor.getContrastColor())
-                            callSimImage.applyColorFilter(simColor)
-                        }
-
                         val acceptDrawableId = when (index) {
                             0 -> R.drawable.ic_phone_one_vector
                             1 -> R.drawable.ic_phone_two_vector
@@ -701,7 +664,6 @@ class CallActivity : SimpleActivity() {
         }
 
         val statusTextId = when (state) {
-            Call.STATE_RINGING -> R.string.is_calling
             Call.STATE_CONNECTING, Call.STATE_DIALING -> R.string.dialing
             else -> 0
         }
@@ -710,6 +672,7 @@ class CallActivity : SimpleActivity() {
             if (statusTextId != 0) {
                 callStatusLabel.text = getString(statusTextId)
             }
+            callStatusLabel.beGoneIf(state == Call.STATE_RINGING)
 
             callManage.beVisibleIf(!isCallEnded && call.hasCapability(Call.Details.CAPABILITY_MANAGE_CONFERENCE))
             setActionButtonEnabled(callSwap, enabled = !isCallEnded && state == Call.STATE_ACTIVE)
@@ -733,17 +696,26 @@ class CallActivity : SimpleActivity() {
         }
 
         updateCallAudioState(CallManager.getCallAudioRoute())
-        updateViaNumber(CallManager.getPrimaryCall())
+        updateCallDestination(CallManager.getPrimaryCall())
     }
 
-    // Telecom stores this extra as the call log's VIA_NUMBER; forwarded VoIP.ms calls
+    // "Via:" the number the caller dialled when known, otherwise "To:" the line it rang.
+    // Telecom stores EXTRA_CHILD_ADDRESS as the call log's VIA_NUMBER; forwarded VoIP.ms calls
     // arrive without it, so fall back to the DID from a relayed ring
-    private fun updateViaNumber(call: Call?) {
+    private fun updateCallDestination(call: Call?) {
         val viaNumber = call?.details?.extras?.getString(Connection.EXTRA_CHILD_ADDRESS).orEmpty()
             .ifEmpty { RingStore.getDidForCall(this, call).orEmpty() }
-        val formattedViaNumber = if (config.formatPhoneNumbers) viaNumber.formatPhoneNumber() else viaNumber
-        binding.callViaNumber.text = getString(R.string.via_number, formattedViaNumber)
-        binding.callViaNumber.beVisibleIf(viaNumber.isNotEmpty())
+        if (viaNumber.isNotEmpty()) {
+            val formattedViaNumber = if (config.formatPhoneNumbers) viaNumber.formatPhoneNumber() else viaNumber
+            binding.callDestination.text = getString(R.string.via_number, formattedViaNumber)
+            binding.callDestination.beVisible()
+            return
+        }
+
+        val isIncoming = isQPlus() && call?.details?.callDirection == Call.Details.DIRECTION_INCOMING
+        val calledAccount = getAvailableSIMCardLabels().firstOrNull { it.handle == call?.details?.accountHandle }
+        binding.callDestination.text = calledAccount?.let { getString(R.string.called_line, it.formattedNumber.ifEmpty { it.label }) }
+        binding.callDestination.beVisibleIf(isIncoming && calledAccount != null)
     }
 
     private fun updateCallOnHoldState(call: Call?) {
@@ -768,9 +740,8 @@ class CallActivity : SimpleActivity() {
                 return@getCallContact
             }
             callContact = contact
-            val avatar = if (!call.isConference()) contact.photoUri else null
             runOnUiThread {
-                updateOtherPersonsInfo(avatar)
+                updateOtherPersonsInfo()
                 checkCalledSIMCard()
             }
         }
@@ -789,6 +760,7 @@ class CallActivity : SimpleActivity() {
 
     private fun callRinging() {
         binding.incomingCallHolder.beVisible()
+        updateOngoingContactDetails()
     }
 
     private fun callStarted() {
@@ -802,13 +774,19 @@ class CallActivity : SimpleActivity() {
         callDurationHandler.post(updateCallDurationTask)
     }
 
-    // keep the contact details on screen once the call is answered, in place of the avatar,
-    // and give them more of the screen by packing the call controls into fewer rows
+    // show the contact details under the caller while ringing, ending above the answer buttons,
+    // and keep them once answered, packing the call controls into fewer rows to make room
     private fun updateOngoingContactDetails() = binding.apply {
-        val showDetails = hasCallStarted && ongoingContactDetails.text.isNotEmpty()
+        val isRinging = CallManager.getState() == Call.STATE_RINGING
+        val showDetails = (hasCallStarted || isRinging) && ongoingContactDetails.text.isNotEmpty()
         ongoingContactDetailsHolder.beVisibleIf(showDetails)
-        callerAvatar.beGoneIf(showDetails)
-        guideline.setGuidelinePercent(if (showDetails) 0.65f else 0.5f)
+        guideline.setGuidelinePercent(
+            when {
+                isRinging -> 0.7f
+                showDetails -> 0.65f
+                else -> 0.5f
+            }
+        )
         buttonGrid.setMaxElementsWrap(if (showDetails) 4 else 3)
     }
 
@@ -895,7 +873,7 @@ class CallActivity : SimpleActivity() {
     }
 
     private val ringListener = {
-        runOnUiThread { updateViaNumber(CallManager.getPrimaryCall()) }
+        runOnUiThread { updateCallDestination(CallManager.getPrimaryCall()) }
     }
 
     private val updateCallDurationTask = object : Runnable {

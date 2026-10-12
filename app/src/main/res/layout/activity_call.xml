@@ -60,8 +60,8 @@
         android:id="@+id/caller_avatar"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="@dimen/activity_margin"
         android:contentDescription="@null"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/caller_name_label"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintEnd_toEndOf="parent"
@@ -77,13 +77,12 @@
         android:id="@+id/caller_name_label"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/bigger_margin"
         android:ellipsize="end"
         android:gravity="center_horizontal"
         android:maxLines="2"
         android:paddingStart="@dimen/medium_margin"
         android:paddingEnd="@dimen/medium_margin"
-        android:textSize="@dimen/caller_name_text_size"
+        android:textSize="@dimen/bigger_text_size"
         app:layout_constraintBottom_toTopOf="@id/caller_number"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -95,9 +94,8 @@
         android:id="@+id/caller_number"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/normal_margin"
         android:gravity="center_horizontal"
-        android:textSize="@dimen/call_status_text_size"
+        android:textSize="@dimen/bigger_text_size"
         app:layout_constraintBottom_toTopOf="@id/call_destination"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -109,24 +107,20 @@
         android:id="@+id/call_status_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/normal_margin"
-        android:alpha="0.8"
-        android:textSize="@dimen/call_status_text_size"
+        android:textSize="@dimen/bigger_text_size"
         app:layout_constraintBottom_toTopOf="@id/hold_status_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/call_via_number"
+        app:layout_constraintTop_toBottomOf="@+id/call_bluetooth_device"
         tools:text="Is Calling" />
 
     <org.fossify.commons.views.MyTextView
         android:id="@+id/call_destination"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/normal_margin"
-        android:alpha="0.8"
         android:gravity="center_horizontal"
         android:textDirection="firstStrongLtr"
-        android:textSize="@dimen/call_status_text_size"
+        android:textSize="@dimen/bigger_text_size"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/call_bluetooth_device"
         app:layout_constraintEnd_toEndOf="parent"
@@ -135,32 +129,14 @@
         tools:text="To: T-Mobile (+1 555-555-0100)"
         tools:visibility="visible" />
 
-    <org.fossify.commons.views.MyTextView
-        android:id="@+id/call_via_number"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/normal_margin"
-        android:alpha="0.8"
-        android:gravity="center_horizontal"
-        android:textDirection="firstStrongLtr"
-        android:textSize="@dimen/call_status_text_size"
-        android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/call_status_label"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/call_bluetooth_device"
-        tools:text="Via: +1 555-555-0101"
-        tools:visibility="visible" />
 
     <TextView
         android:id="@+id/hold_status_label"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/normal_margin"
-        android:alpha="0.8"
         android:text="@string/call_on_hold"
         android:textColor="@color/md_red"
-        android:textSize="@dimen/call_status_text_size"
+        android:textSize="@dimen/bigger_text_size"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/ongoing_contact_details_holder"
         app:layout_constraintEnd_toEndOf="parent"
@@ -172,11 +148,9 @@
         android:id="@+id/call_bluetooth_device"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/normal_margin"
-        android:alpha="0.8"
-        android:textSize="@dimen/call_status_text_size"
+        android:textSize="@dimen/bigger_text_size"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/call_via_number"
+        app:layout_constraintBottom_toTopOf="@id/call_status_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/call_destination"
@@ -190,7 +164,6 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginHorizontal="@dimen/activity_margin"
-        android:layout_marginTop="@dimen/normal_margin"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/guideline"
         app:layout_constraintEnd_toEndOf="parent"
@@ -201,6 +174,7 @@
             android:id="@+id/ongoing_contact_details"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
             android:textDirection="firstStrongLtr"
             android:textSize="@dimen/bigger_text_size"
             tools:text="Contact details" />
@@ -387,38 +361,6 @@
         android:layout_height="match_parent"
         android:visibility="gone"
         tools:visibility="gone">
-
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/incoming_guideline"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            app:layout_constraintGuide_percent="0.5" />
-
-        <ScrollView
-            android:id="@+id/caller_contact_details_holder"
-            android:fadeScrollbars="false"
-            android:scrollbars="vertical"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginHorizontal="@dimen/activity_margin"
-            android:layout_marginBottom="@dimen/activity_margin"
-            android:visibility="gone"
-            app:layout_constraintBottom_toTopOf="@+id/call_draggable_background"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/incoming_guideline"
-            tools:visibility="visible">
-
-            <org.fossify.commons.views.MyTextView
-                android:id="@+id/caller_contact_details"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textDirection="firstStrongLtr"
-                android:textSize="@dimen/bigger_text_size"
-                tools:text="Contact details" />
-
-        </ScrollView>
 
         <ImageView
             android:id="@+id/call_decline"
