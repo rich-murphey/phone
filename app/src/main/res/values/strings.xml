@@ -36,7 +36,8 @@
     <string name="caller_id_name">Caller ID: %s</string>
     <string name="called_line">To: %s</string>
     <string name="via_number">Via: %s</string>
-    <string name="contact_groups">Groups: %s</string>
+    <string name="contact_labels">Labels: %s</string>
+    <string name="screening_filter">Filter: %s</string>
     <string name="contact_saved_in">Saved in: %s</string>
     <string name="last_call">Last call: %1$s, %2$s</string>
     <string name="last_call_incoming">incoming</string>

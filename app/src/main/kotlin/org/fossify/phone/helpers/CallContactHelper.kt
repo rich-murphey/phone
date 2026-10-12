@@ -60,7 +60,7 @@ fun getCallContact(context: Context, call: Call?, callback: (CallContact) -> Uni
 
                 callContact.callerIdName = call?.details?.callerDisplayName.orEmpty()
                 callContact.matchingContacts = contacts.filter { it.doesHavePhoneNumber(number) }
-                callContact.contactDetails = getContactDetailsText(context, callContact.matchingContacts, number)
+                callContact.contactDetails = getContactDetailsText(context, callContact.matchingContacts, number, call?.details?.accountHandle)
 
                 val contact = callContact.matchingContacts.firstOrNull()
                 if (contact != null) {

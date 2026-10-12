@@ -296,7 +296,7 @@ class SettingsActivity : SimpleActivity() {
 
     private fun setupCallScreening() {
         val lines = getAvailableSIMCardLabels()
-        binding.settingsCallScreening.text = lines.joinToString("\n") { "${it.label}: ${getScreeningLevelText(config.getScreeningLevel(it.handle))}" }
+        binding.settingsCallScreening.text = lines.joinToString("\n") { "${it.label}: ${CallScreening.getLevelText(this, config.getScreeningLevel(it.handle))}" }
         binding.settingsCallScreeningHolder.setOnClickListener {
             val items = ArrayList(lines.mapIndexed { index, line -> RadioItem(index, line.label, line) })
             items.add(RadioItem(lines.size, getString(R.string.screening_level_labels)))
@@ -306,17 +306,8 @@ class SettingsActivity : SimpleActivity() {
         }
     }
 
-    private fun getScreeningLevelText(level: Int): String {
-        if (level == 0) {
-            return getString(R.string.screening_everyone)
-        }
-
-        val labels = config.screeningLabels.take(level).filter { it.isNotEmpty() }
-        return getString(R.string.screening_level, level, labels.joinToString(", ").ifEmpty { getString(R.string.screening_no_label) })
-    }
-
     private fun pickScreeningLevel(line: SIMAccount) {
-        val items = ArrayList((0..SCREENING_LEVELS).map { RadioItem(it, getScreeningLevelText(it)) })
+        val items = ArrayList((0..SCREENING_LEVELS).map { RadioItem(it, CallScreening.getLevelText(this, it)) })
         RadioGroupDialog(this, items, config.getScreeningLevel(line.handle)) {
             config.setScreeningLevel(line.handle, it as Int)
             if (it > 0) {

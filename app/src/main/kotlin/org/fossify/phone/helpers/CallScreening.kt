@@ -7,6 +7,7 @@ import android.provider.ContactsContract.Data
 import android.provider.ContactsContract.Groups
 import android.provider.ContactsContract.PhoneLookup
 import android.telecom.PhoneAccountHandle
+import org.fossify.phone.R
 import org.fossify.phone.extensions.config
 
 // Per-line whitelist. Each level is a contact label, matched by title across accounts;
@@ -28,6 +29,15 @@ object CallScreening {
         return labels.any { it in allowed }
     }
 
+    fun getLevelText(context: Context, level: Int): String {
+        if (level == 0) {
+            return context.getString(R.string.screening_everyone)
+        }
+
+        val labels = context.config.screeningLabels.take(level).filter { it.isNotEmpty() }
+        return context.getString(R.string.screening_level, level, labels.joinToString(", ").ifEmpty { context.getString(R.string.screening_no_label) })
+    }
+
     fun getLabelTitles(context: Context): List<String> {
         val titles = mutableListOf<String>()
         try {
@@ -42,7 +52,7 @@ object CallScreening {
         return titles.distinct().sorted()
     }
 
-    private fun getCallerLabels(context: Context, number: String): Set<String>? {
+    fun getCallerLabels(context: Context, number: String): Set<String>? {
         val resolver = context.contentResolver
         return try {
             val contactIds = mutableListOf<Long>()

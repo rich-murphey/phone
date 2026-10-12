@@ -4,7 +4,6 @@ import android.content.Context
 import android.database.Cursor
 import android.provider.ContactsContract.CommonDataKinds.Email
 import android.provider.ContactsContract.CommonDataKinds.Event
-import android.provider.ContactsContract.CommonDataKinds.GroupMembership
 import android.provider.ContactsContract.CommonDataKinds.Identity
 import android.provider.ContactsContract.CommonDataKinds.Im
 import android.provider.ContactsContract.CommonDataKinds.Nickname
@@ -18,10 +17,10 @@ import android.provider.ContactsContract.CommonDataKinds.StructuredName
 import android.provider.ContactsContract.CommonDataKinds.StructuredPostal
 import android.provider.ContactsContract.CommonDataKinds.Website
 import android.provider.ContactsContract.Data
-import android.provider.ContactsContract.Groups
 import android.provider.ContactsContract.RawContacts
 import android.provider.CallLog.Calls
 import android.provider.Telephony.Sms
+import android.telecom.PhoneAccountHandle
 import android.text.format.DateUtils
 import android.telephony.PhoneNumberUtils
 import android.text.SpannableStringBuilder
@@ -45,8 +44,7 @@ private const val ORDER_WEBSITE = 7
 private const val ORDER_IDENTITY = 8
 private const val ORDER_CUSTOM = 9
 private const val ORDER_OTHER = 10
-private const val ORDER_GROUPS = 11
-private const val ORDER_ACCOUNTS = 12
+private const val ORDER_ACCOUNTS = 11
 
 // rows Google's contacts sync adapter adds for fields Android has no type for
 private const val GOOGLE_USER_DEFINED_FIELD = "vnd.com.google.cursor.item/contact_user_defined_field"
@@ -54,10 +52,10 @@ private const val GOOGLE_MISC = "vnd.com.google.cursor.item/contact_misc"
 
 private class DetailLine(val order: Int, val text: String, val bold: Boolean = false)
 
-fun getContactDetailsText(context: Context, contacts: List<Contact>, callingNumber: String): CharSequence {
+fun getContactDetailsText(context: Context, contacts: List<Contact>, callingNumber: String, line: PhoneAccountHandle?): CharSequence {
     val deviceContactIds = contacts.filter { !it.isPrivate() }.map { it.contactId }.distinct()
     val numbers = (contacts.flatMap { contact -> contact.phoneNumbers.map { it.value } } + callingNumber).filter { it.isNotBlank() }.distinct()
-    val sections = listOf(getHistory(context, numbers)) +
+    val sections = listOf(getScreening(context, callingNumber, line), getHistory(context, numbers)) +
         deviceContactIds.map { getDeviceContactDetails(context, it, callingNumber) } +
         contacts.filter { it.isPrivate() }.map { getPrivateContactDetails(context, it, callingNumber) }
 
@@ -77,7 +75,6 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
     val organizations = LinkedHashSet<String>()
     val lines = mutableListOf<DetailLine>()
     val notes = LinkedHashSet<String>()
-    val groupIds = LinkedHashSet<Long>()
     val accounts = LinkedHashSet<String>()
 
     val projection = arrayOf(
@@ -191,8 +188,6 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
 
                     Note.CONTENT_ITEM_TYPE -> cursor.text(Note.NOTE).trim().takeIf { it.isNotEmpty() }?.let { notes.add(it) }
 
-                    GroupMembership.CONTENT_ITEM_TYPE -> groupIds.add(cursor.getLong(cursor.getColumnIndexOrThrow(GroupMembership.GROUP_ROW_ID)))
-
                     Photo.CONTENT_ITEM_TYPE -> {}
 
                     // DATA1 is the field's label, DATA2 its value
@@ -220,11 +215,6 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
         return ""
     }
 
-    val groups = getGroupTitles(context, groupIds)
-    if (groups.isNotEmpty()) {
-        lines.add(DetailLine(ORDER_GROUPS, context.getString(R.string.contact_groups, groups.joinToString(", "))))
-    }
-
     if (accounts.isNotEmpty()) {
         lines.add(DetailLine(ORDER_ACCOUNTS, context.getString(R.string.contact_saved_in, accounts.joinToString(", "))))
     }
@@ -250,6 +240,21 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
         }
         notes.forEach { append("\n\n$it") }
     }
+}
+
+// the caller's contact labels and the called line's screening level
+private fun getScreening(context: Context, callingNumber: String, line: PhoneAccountHandle?): String {
+    val lines = mutableListOf<String>()
+    val labels = CallScreening.getCallerLabels(context, callingNumber).orEmpty()
+    if (labels.isNotEmpty()) {
+        lines.add(context.getString(R.string.contact_labels, labels.sorted().joinToString(", ")))
+    }
+
+    if (line != null) {
+        lines.add(context.getString(R.string.screening_filter, CallScreening.getLevelText(context, context.config.getScreeningLevel(line))))
+    }
+
+    return lines.joinToString("\n")
 }
 
 // the last call and the last two SMS with any of the person's numbers, unknown callers included
@@ -302,26 +307,6 @@ private fun getHistory(context: Context, numbers: List<String>): CharSequence {
 
 private fun formatDate(context: Context, millis: Long) =
     DateUtils.formatDateTime(context, millis, DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_SHOW_TIME or DateUtils.FORMAT_ABBREV_MONTH)
-
-// user created groups only, system groups like "My Contacts" say nothing about the person
-private fun getGroupTitles(context: Context, groupIds: Collection<Long>): List<String> {
-    if (groupIds.isEmpty()) {
-        return emptyList()
-    }
-
-    val titles = mutableListOf<String>()
-    val selection = "${Groups._ID} IN (${groupIds.joinToString(",")}) AND ${Groups.SYSTEM_ID} IS NULL"
-    try {
-        context.contentResolver.query(Groups.CONTENT_URI, arrayOf(Groups.TITLE), selection, null, null)?.use { cursor ->
-            while (cursor.moveToNext()) {
-                cursor.text(Groups.TITLE).takeIf { it.isNotBlank() }?.let { titles.add(it) }
-            }
-        }
-    } catch (ignored: Exception) {
-    }
-
-    return titles.distinct()
-}
 
 private fun getPrivateContactDetails(context: Context, contact: Contact, callingNumber: String): CharSequence {
     return buildSpannedString {
