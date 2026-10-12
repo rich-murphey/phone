@@ -28,10 +28,20 @@ object CallScreening {
             return false
         }
 
+        if (ringsVia(context, number)) {
+            return true
+        }
+
         val allowed = context.config.screeningLabels.take(level).filter { it.isNotEmpty() }
         // a contacts provider failure lets the call ring rather than turning family away
         val labels = getCallerLabels(context, number) ?: return true
         return labels.any { it in allowed }
+    }
+
+    // a forwarded call is matched to the VoIP.ms number dialled through Inbox's ring broadcast
+    fun ringsVia(context: Context, number: String): Boolean {
+        val did = RingStore.getDid(context.config.normalizeToE164(number)) ?: return false
+        return did in context.config.alwaysRingVia
     }
 
     // Telecom hands screening services the call without its PhoneAccountHandle, so take the line

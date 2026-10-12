@@ -4,7 +4,10 @@ import android.app.role.RoleManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.text.InputType
 import android.view.Menu
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -12,6 +15,7 @@ import org.fossify.commons.activities.ManageBlockedNumbersActivity
 import org.fossify.commons.dialogs.ChangeDateTimeFormatDialog
 import org.fossify.commons.dialogs.RadioGroupDialog
 import org.fossify.commons.extensions.baseConfig
+import org.fossify.commons.extensions.formatPhoneNumber
 import org.fossify.commons.extensions.beVisibleIf
 import org.fossify.commons.extensions.getFontSizeText
 import org.fossify.commons.extensions.getProperPrimaryColor
@@ -110,6 +114,7 @@ class SettingsActivity : SimpleActivity() {
         setupOnContactClick()
         setupDialPadOpen()
         setupCallScreening()
+        setupAlwaysRingVia()
         setupGroupSubsequentCalls()
         setupStartNameWithSurname()
         setupFormatPhoneNumbers()
@@ -303,6 +308,28 @@ class SettingsActivity : SimpleActivity() {
             RadioGroupDialog(this, items) {
                 if (it is SIMAccount) pickScreeningLevel(it) else pickScreeningLevelToLabel()
             }
+        }
+    }
+
+    private fun setupAlwaysRingVia() {
+        binding.settingsAlwaysRingVia.text = config.alwaysRingVia.sorted().joinToString(", ") { it.formatPhoneNumber() }
+            .ifEmpty { getString(R.string.always_ring_via_none) }
+        binding.settingsAlwaysRingViaHolder.setOnClickListener {
+            val input = EditText(this).apply {
+                inputType = InputType.TYPE_CLASS_PHONE
+                hint = getString(R.string.always_ring_via_hint)
+                setText(config.alwaysRingVia.sorted().joinToString(", "))
+            }
+            AlertDialog.Builder(this)
+                .setTitle(R.string.always_ring_via)
+                .setView(input)
+                .setPositiveButton(R.string.ok) { _, _ ->
+                    config.alwaysRingVia = input.text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                        .map { config.normalizeToE164(it) }.toSet()
+                    setupAlwaysRingVia()
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
         }
     }
 

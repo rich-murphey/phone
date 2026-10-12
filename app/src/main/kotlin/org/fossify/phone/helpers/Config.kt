@@ -144,6 +144,11 @@ class Config(context: Context) : BaseConfig(context) {
             ?: listOf("Family", "Starred in Android", "", "My Contacts")
         set(screeningLabels) = prefs.edit().putString(SCREENING_LABELS, screeningLabels.joinToString("\n")).apply()
 
+    // VoIP.ms numbers whose forwarded calls ring whatever the line's level, E.164
+    var alwaysRingVia: Set<String>
+        get() = prefs.getStringSet(ALWAYS_RING_VIA, emptySet())!!
+        set(alwaysRingVia) = prefs.edit().putStringSet(ALWAYS_RING_VIA, alwaysRingVia).apply()
+
     fun getScreeningLevel(handle: PhoneAccountHandle) = prefs.getInt(SCREENING_LEVEL_PREFIX + handle.id, 0)
 
     fun setScreeningLevel(handle: PhoneAccountHandle, level: Int) =

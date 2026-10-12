@@ -1,5 +1,7 @@
 package org.fossify.phone.services
 
+import android.os.Handler
+import android.os.Looper
 import android.telecom.Call
 import android.telecom.CallScreeningService
 import org.fossify.commons.extensions.baseConfig
@@ -8,9 +10,15 @@ import org.fossify.commons.extensions.isNumberBlocked
 import org.fossify.commons.helpers.ContactLookupResult
 import org.fossify.commons.helpers.SimpleContactsHelper
 import org.fossify.commons.helpers.isQPlus
+import org.fossify.phone.extensions.config
 import org.fossify.phone.helpers.CallScreening
+import org.fossify.phone.helpers.RingStore
 
 class SimpleCallScreeningService : CallScreeningService() {
+    companion object {
+        // Inbox's ring broadcast can trail the call; Telecom waits about 5 s for a screening answer
+        private const val RING_WAIT_MS = 2500L
+    }
 
     override fun onScreenCall(callDetails: Call.Details) {
         val number = callDetails.handle?.schemeSpecificPart
@@ -20,14 +28,7 @@ class SimpleCallScreeningService : CallScreeningService() {
             }
 
             isIncoming(callDetails) && !CallScreening.allows(this, CallScreening.getRingingLine(this), number) -> {
-                // declined, so T-Mobile hands it to the line's busy forwarding (a VoIP.ms voicemail
-                // number); kept in the call log so turned-away callers can be seen
-                val response = CallResponse.Builder()
-                    .setDisallowCall(true)
-                    .setRejectCall(true)
-                    .setSkipNotification(true)
-                    .build()
-                respondToCall(callDetails, response)
+                declineUnlessRingsVia(callDetails, number)
             }
 
             number != null && baseConfig.blockUnknownNumbers -> {
@@ -44,6 +45,36 @@ class SimpleCallScreeningService : CallScreeningService() {
                 respondToCall(callDetails, isBlocked = false)
             }
         }
+    }
+
+    // A call forwarded from an always-ring VoIP.ms number is known only once its ring broadcast
+    // lands, so wait briefly for it before declining. Declined calls go to the line's busy
+    // forwarding (a VoIP.ms voicemail number) and stay in the call log.
+    private fun declineUnlessRingsVia(callDetails: Call.Details, number: String?) {
+        val decline = CallResponse.Builder()
+            .setDisallowCall(true)
+            .setRejectCall(true)
+            .setSkipNotification(true)
+            .build()
+        if (number.isNullOrEmpty() || config.alwaysRingVia.isEmpty()) {
+            respondToCall(callDetails, decline)
+            return
+        }
+
+        val handler = Handler(Looper.getMainLooper())
+        var responded = false
+        lateinit var onRing: () -> Unit
+        fun respond(allow: Boolean) {
+            if (responded) return
+            responded = true
+            RingStore.removeListener(onRing)
+            handler.removeCallbacksAndMessages(null)
+            respondToCall(callDetails, if (allow) CallResponse.Builder().build() else decline)
+        }
+
+        onRing = { handler.post { if (CallScreening.ringsVia(this, number)) respond(true) } }
+        RingStore.addListener(onRing)
+        handler.postDelayed({ respond(false) }, RING_WAIT_MS)
     }
 
     // the screening role also sees outgoing calls from Android 10
