@@ -173,6 +173,8 @@ class MainActivity : SimpleActivity() {
         lines.forEach { line ->
             val row = ItemScreeningLineBinding.inflate(layoutInflater, binding.mainScreeningHolder, true)
             row.screeningLine.text = line.title
+            row.screeningLine.setTextColor(textColor)
+            row.screeningLevelDescription.setTextColor(textColor)
             val buttonIds = (0..SCREENING_LEVELS).map { level ->
                 MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                     id = View.generateViewId()
