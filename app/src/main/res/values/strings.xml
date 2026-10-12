@@ -105,6 +105,8 @@
     <string name="screening_everyone">Everyone</string>
     <string name="screening_level">Level %1$d: %2$s</string>
     <string name="screening_no_label">no label</string>
+    <string name="screening_off">Off</string>
+    <string name="screening_everyone_rings">Everyone rings</string>
 
     <!-- FAQ -->
     <string name="faq_1_title">I hear incoming calls, but the screen doesn\'t turn on. What can I do?</string>

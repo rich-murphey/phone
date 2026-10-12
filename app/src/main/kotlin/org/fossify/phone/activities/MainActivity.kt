@@ -6,18 +6,22 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
+import android.content.res.ColorStateList
 import android.content.res.Configuration
+import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.provider.Settings
+import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.viewpager.widget.ViewPager
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import me.grantland.widget.AutofitHelper
 import org.fossify.commons.dialogs.ChangeViewTypeDialog
@@ -33,20 +37,25 @@ import org.fossify.phone.BuildConfig
 import org.fossify.phone.R
 import org.fossify.phone.adapters.ViewPagerAdapter
 import org.fossify.phone.databinding.ActivityMainBinding
+import org.fossify.phone.databinding.ItemScreeningLineBinding
 import org.fossify.phone.dialogs.ChangeSortingDialog
 import org.fossify.phone.dialogs.FilterContactSourcesDialog
 import org.fossify.phone.extensions.clearMissedCalls
 import org.fossify.phone.extensions.config
+import org.fossify.phone.extensions.getAvailableSIMCardLabels
 import org.fossify.phone.extensions.handleFullScreenNotificationsPermission
 import org.fossify.phone.extensions.launchCreateNewContactIntent
 import org.fossify.phone.fragments.ContactsFragment
 import org.fossify.phone.fragments.FavoritesFragment
 import org.fossify.phone.fragments.MyViewPagerFragment
 import org.fossify.phone.fragments.RecentsFragment
+import org.fossify.phone.helpers.CallScreening
 import org.fossify.phone.helpers.OPEN_DIAL_PAD_AT_LAUNCH
 import org.fossify.phone.helpers.RecentsHelper
+import org.fossify.phone.helpers.SCREENING_LEVELS
 import org.fossify.phone.helpers.tabsList
 import org.fossify.phone.models.Events
+import org.fossify.phone.models.SIMAccount
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -124,6 +133,7 @@ class MainActivity : SimpleActivity() {
         val dialpadIcon = resources.getColoredDrawableWithColor(R.drawable.ic_dialpad_vector, properPrimaryColor.getContrastColor())
         binding.mainDialpadButton.setImageDrawable(dialpadIcon)
 
+        setupScreeningLevels()
         updateTextColors(binding.mainHolder)
         setupTabColors()
 
@@ -153,6 +163,53 @@ class MainActivity : SimpleActivity() {
         Handler().postDelayed({
             getRecentsFragment()?.refreshItems()
         }, 2000)
+    }
+
+    // one row of level buttons per line; the labels each level admits are set in Settings
+    private fun setupScreeningLevels() {
+        val lines = getAvailableSIMCardLabels()
+        val textColor = getProperTextColor()
+        val primaryColor = getProperPrimaryColor()
+        binding.mainScreeningHolder.removeAllViews()
+        binding.mainScreeningHolder.beVisibleIf(lines.isNotEmpty())
+        lines.forEach { line ->
+            val row = ItemScreeningLineBinding.inflate(layoutInflater, binding.mainScreeningHolder, true)
+            row.screeningLine.text = line.formattedNumber.ifEmpty { line.label }
+            val buttonIds = (0..SCREENING_LEVELS).map { level ->
+                MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                    id = View.generateViewId()
+                    text = if (level == 0) getString(R.string.screening_off) else level.toString()
+                    minWidth = 0
+                    minimumWidth = 0
+                    setPadding(0, paddingTop, 0, paddingBottom)
+                    val checked = intArrayOf(android.R.attr.state_checked)
+                    backgroundTintList = ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(primaryColor, Color.TRANSPARENT))
+                    setTextColor(ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(primaryColor.getContrastColor(), textColor)))
+                    strokeColor = ColorStateList.valueOf(textColor.adjustAlpha(0.4f))
+                    row.screeningLevels.addView(this, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                }.id
+            }
+
+            val level = config.getScreeningLevel(line.handle)
+            row.screeningLevels.check(buttonIds[level.coerceIn(0, SCREENING_LEVELS)])
+            row.screeningLevelDescription.text = getScreeningDescription(level)
+            row.screeningLevels.addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (isChecked) {
+                    setScreeningLevel(line, buttonIds.indexOf(checkedId))
+                    row.screeningLevelDescription.text = getScreeningDescription(buttonIds.indexOf(checkedId))
+                }
+            }
+        }
+    }
+
+    private fun getScreeningDescription(level: Int) =
+        if (level == 0) getString(R.string.screening_everyone_rings) else CallScreening.getLevelText(this, level)
+
+    private fun setScreeningLevel(line: SIMAccount, level: Int) {
+        config.setScreeningLevel(line.handle, level)
+        if (level > 0 && isQPlus()) {
+            setDefaultCallerIdApp()
+        }
     }
 
     override fun onPause() {
