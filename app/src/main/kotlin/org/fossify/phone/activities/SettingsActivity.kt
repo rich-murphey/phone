@@ -44,12 +44,10 @@ import org.fossify.phone.dialogs.ExportCallHistoryDialog
 import org.fossify.phone.dialogs.ManageVisibleTabsDialog
 import org.fossify.phone.extensions.canLaunchAccountsConfiguration
 import org.fossify.phone.extensions.config
-import org.fossify.phone.extensions.getAvailableSIMCardLabels
 import org.fossify.phone.extensions.launchAccountsConfiguration
 import org.fossify.phone.helpers.CallScreening
 import org.fossify.phone.helpers.RecentsHelper
 import org.fossify.phone.helpers.SCREENING_LEVELS
-import org.fossify.phone.models.SIMAccount
 import org.fossify.phone.models.RecentCall
 import java.util.Locale
 import kotlin.system.exitProcess
@@ -300,43 +298,44 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private fun setupCallScreening() {
-        val lines = getAvailableSIMCardLabels()
-        binding.settingsCallScreening.text = lines.joinToString("\n") { "${it.label}: ${CallScreening.getLevelText(this, config.getScreeningLevel(it.handle))}" }
+        val lines = CallScreening.getLines(this)
+        binding.settingsCallScreening.text = lines.joinToString("\n") { "${it.title}: ${CallScreening.getLevelText(this, config.getScreeningLevel(it.key))}" }
         binding.settingsCallScreeningHolder.setOnClickListener {
-            val items = ArrayList(lines.mapIndexed { index, line -> RadioItem(index, line.label, line) })
+            val items = ArrayList(lines.mapIndexed { index, line -> RadioItem(index, line.title, line) })
             items.add(RadioItem(lines.size, getString(R.string.screening_level_labels)))
             RadioGroupDialog(this, items) {
-                if (it is SIMAccount) pickScreeningLevel(it) else pickScreeningLevelToLabel()
+                if (it is CallScreening.Line) pickScreeningLevel(it) else pickScreeningLevelToLabel()
             }
         }
     }
 
     private fun setupAlwaysRingVia() {
-        binding.settingsAlwaysRingVia.text = config.alwaysRingVia.sorted().joinToString(", ") { it.formatPhoneNumber() }
+        binding.settingsAlwaysRingVia.text = config.screenedVoipNumbers.sorted().joinToString(", ") { it.formatPhoneNumber() }
             .ifEmpty { getString(R.string.always_ring_via_none) }
         binding.settingsAlwaysRingViaHolder.setOnClickListener {
             val input = EditText(this).apply {
                 inputType = InputType.TYPE_CLASS_PHONE
                 hint = getString(R.string.always_ring_via_hint)
-                setText(config.alwaysRingVia.sorted().joinToString(", "))
+                setText(config.screenedVoipNumbers.sorted().joinToString(", "))
             }
             AlertDialog.Builder(this)
                 .setTitle(R.string.always_ring_via)
                 .setView(input)
                 .setPositiveButton(R.string.ok) { _, _ ->
-                    config.alwaysRingVia = input.text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                    config.screenedVoipNumbers = input.text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                         .map { config.normalizeToE164(it) }.toSet()
                     setupAlwaysRingVia()
+                    setupCallScreening()
                 }
                 .setNegativeButton(R.string.cancel, null)
                 .show()
         }
     }
 
-    private fun pickScreeningLevel(line: SIMAccount) {
+    private fun pickScreeningLevel(line: CallScreening.Line) {
         val items = ArrayList((0..SCREENING_LEVELS).map { RadioItem(it, CallScreening.getLevelText(this, it)) })
-        RadioGroupDialog(this, items, config.getScreeningLevel(line.handle)) {
-            config.setScreeningLevel(line.handle, it as Int)
+        RadioGroupDialog(this, items, config.getScreeningLevel(line.key)) {
+            config.setScreeningLevel(line.key, it as Int)
             if (it > 0) {
                 requestScreeningRoleIfNeeded()
             }

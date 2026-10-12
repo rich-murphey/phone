@@ -250,8 +250,8 @@ private fun getScreening(context: Context, callingNumber: String, line: PhoneAcc
         lines.add(context.getString(R.string.contact_labels, labels.sorted().joinToString(", ")))
     }
 
-    if (line != null) {
-        lines.add(context.getString(R.string.screening_filter, CallScreening.getLevelText(context, context.config.getScreeningLevel(line))))
+    CallScreening.getLevelKey(context, line, callingNumber)?.let { key ->
+        lines.add(context.getString(R.string.screening_filter, CallScreening.getLevelText(context, context.config.getScreeningLevel(key))))
     }
 
     return lines.joinToString("\n")

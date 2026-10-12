@@ -42,7 +42,6 @@ import org.fossify.phone.dialogs.ChangeSortingDialog
 import org.fossify.phone.dialogs.FilterContactSourcesDialog
 import org.fossify.phone.extensions.clearMissedCalls
 import org.fossify.phone.extensions.config
-import org.fossify.phone.extensions.getAvailableSIMCardLabels
 import org.fossify.phone.extensions.handleFullScreenNotificationsPermission
 import org.fossify.phone.extensions.launchCreateNewContactIntent
 import org.fossify.phone.fragments.ContactsFragment
@@ -55,7 +54,6 @@ import org.fossify.phone.helpers.RecentsHelper
 import org.fossify.phone.helpers.SCREENING_LEVELS
 import org.fossify.phone.helpers.tabsList
 import org.fossify.phone.models.Events
-import org.fossify.phone.models.SIMAccount
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
@@ -167,14 +165,14 @@ class MainActivity : SimpleActivity() {
 
     // one row of level buttons per line; the labels each level admits are set in Settings
     private fun setupScreeningLevels() {
-        val lines = getAvailableSIMCardLabels()
+        val lines = CallScreening.getLines(this)
         val textColor = getProperTextColor()
         val primaryColor = getProperPrimaryColor()
         binding.mainScreeningHolder.removeAllViews()
         binding.mainScreeningHolder.beVisibleIf(lines.isNotEmpty())
         lines.forEach { line ->
             val row = ItemScreeningLineBinding.inflate(layoutInflater, binding.mainScreeningHolder, true)
-            row.screeningLine.text = line.formattedNumber.ifEmpty { line.label }
+            row.screeningLine.text = line.title
             val buttonIds = (0..SCREENING_LEVELS).map { level ->
                 MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                     id = View.generateViewId()
@@ -190,7 +188,7 @@ class MainActivity : SimpleActivity() {
                 }.id
             }
 
-            val level = config.getScreeningLevel(line.handle)
+            val level = config.getScreeningLevel(line.key)
             row.screeningLevels.check(buttonIds[level.coerceIn(0, SCREENING_LEVELS)])
             row.screeningLevelDescription.text = getScreeningDescription(level)
             row.screeningLevels.addOnButtonCheckedListener { _, checkedId, isChecked ->
@@ -205,8 +203,8 @@ class MainActivity : SimpleActivity() {
     private fun getScreeningDescription(level: Int) =
         if (level == 0) getString(R.string.screening_everyone_rings) else CallScreening.getLevelText(this, level)
 
-    private fun setScreeningLevel(line: SIMAccount, level: Int) {
-        config.setScreeningLevel(line.handle, level)
+    private fun setScreeningLevel(line: CallScreening.Line, level: Int) {
+        config.setScreeningLevel(line.key, level)
         if (level > 0 && isQPlus()) {
             setDefaultCallerIdApp()
         }

@@ -27,8 +27,12 @@ class SimpleCallScreeningService : CallScreeningService() {
                 respondToCall(callDetails, isBlocked = true)
             }
 
+            isIncoming(callDetails) && CallScreening.mayDependOnRing(this, CallScreening.getRingingLine(this), number) -> {
+                screenAfterRing(callDetails, number)
+            }
+
             isIncoming(callDetails) && !CallScreening.allows(this, CallScreening.getRingingLine(this), number) -> {
-                declineUnlessRingsVia(callDetails, number)
+                decline(callDetails)
             }
 
             number != null && baseConfig.blockUnknownNumbers -> {
@@ -47,34 +51,37 @@ class SimpleCallScreeningService : CallScreeningService() {
         }
     }
 
-    // A call forwarded from an always-ring VoIP.ms number is known only once its ring broadcast
-    // lands, so wait briefly for it before declining. Declined calls go to the line's busy
-    // forwarding (a VoIP.ms voicemail number) and stay in the call log.
-    private fun declineUnlessRingsVia(callDetails: Call.Details, number: String?) {
-        val decline = CallResponse.Builder()
+    // Declined calls go to the line's busy forwarding (a VoIP.ms voicemail number) and stay in the call log
+    private fun decline(callDetails: Call.Details) {
+        val response = CallResponse.Builder()
             .setDisallowCall(true)
             .setRejectCall(true)
             .setSkipNotification(true)
             .build()
-        if (number.isNullOrEmpty() || config.alwaysRingVia.isEmpty()) {
-            respondToCall(callDetails, decline)
-            return
-        }
+        respondToCall(callDetails, response)
+    }
 
+    // A call forwarded from a VoIP.ms number with its own level is known only once Inbox's ring
+    // broadcast lands, so wait briefly for it when it would change the answer
+    private fun screenAfterRing(callDetails: Call.Details, number: String?) {
         val handler = Handler(Looper.getMainLooper())
         var responded = false
         lateinit var onRing: () -> Unit
-        fun respond(allow: Boolean) {
+        fun respond() {
             if (responded) return
             responded = true
             RingStore.removeListener(onRing)
             handler.removeCallbacksAndMessages(null)
-            respondToCall(callDetails, if (allow) CallResponse.Builder().build() else decline)
+            if (CallScreening.allows(this, CallScreening.getRingingLine(this), number)) {
+                respondToCall(callDetails, isBlocked = false)
+            } else {
+                decline(callDetails)
+            }
         }
 
-        onRing = { handler.post { if (CallScreening.ringsVia(this, number)) respond(true) } }
+        onRing = { handler.post { if (number != null && RingStore.getDid(config.normalizeToE164(number)) != null) respond() } }
         RingStore.addListener(onRing)
-        handler.postDelayed({ respond(false) }, RING_WAIT_MS)
+        handler.postDelayed({ respond() }, RING_WAIT_MS)
     }
 
     // the screening role also sees outgoing calls from Android 10

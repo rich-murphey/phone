@@ -10,16 +10,46 @@ import android.provider.ContactsContract.PhoneLookup
 import android.telecom.PhoneAccountHandle
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
+import org.fossify.commons.extensions.formatPhoneNumber
 import org.fossify.commons.extensions.telecomManager
 import org.fossify.commons.helpers.isSPlus
 import org.fossify.phone.R
 import org.fossify.phone.extensions.config
+import org.fossify.phone.extensions.getAvailableSIMCardLabels
 
 // Per-line whitelist. Each level is a contact label, matched by title across accounts;
 // level n rings for callers carrying any of the first n labels, level 0 rings for everyone.
+// A line is a SIM, or a VoIP.ms number whose forwarded calls are known from Inbox's ring broadcast.
 object CallScreening {
+    class Line(val key: String, val title: String)
+
+    fun getLines(context: Context): List<Line> =
+        context.getAvailableSIMCardLabels().map { Line(it.handle.id, it.formattedNumber.ifEmpty { it.label }) } +
+            context.config.screenedVoipNumbers.sorted().map { Line(it, it.formatPhoneNumber()) }
+
+    // the VoIP.ms number's level when the call was forwarded from one with its own, else the SIM's
+    fun getLevelKey(context: Context, handle: PhoneAccountHandle?, number: String?): String? {
+        val did = number?.takeIf { it.isNotEmpty() }?.let { RingStore.getDid(context.config.normalizeToE164(it)) }
+        return did?.takeIf { it in context.config.screenedVoipNumbers } ?: handle?.id
+    }
+
     fun allows(context: Context, handle: PhoneAccountHandle?, number: String?): Boolean {
-        val level = handle?.let { context.config.getScreeningLevel(it) } ?: 0
+        val level = getLevelKey(context, handle, number)?.let { context.config.getScreeningLevel(it) } ?: 0
+        return allowsAt(context, level, number)
+    }
+
+    // whether a ring broadcast still to come could change the answer for this caller
+    fun mayDependOnRing(context: Context, handle: PhoneAccountHandle?, number: String?): Boolean {
+        val config = context.config
+        if (number.isNullOrEmpty() || config.screenedVoipNumbers.isEmpty() || RingStore.getDid(config.normalizeToE164(number)) != null) {
+            return false
+        }
+
+        val now = allows(context, handle, number)
+        return config.screenedVoipNumbers.any { allowsAt(context, config.getScreeningLevel(it), number) != now }
+    }
+
+    private fun allowsAt(context: Context, level: Int, number: String?): Boolean {
         if (level == 0) {
             return true
         }
@@ -28,20 +58,10 @@ object CallScreening {
             return false
         }
 
-        if (ringsVia(context, number)) {
-            return true
-        }
-
         val allowed = context.config.screeningLabels.take(level).filter { it.isNotEmpty() }
         // a contacts provider failure lets the call ring rather than turning family away
         val labels = getCallerLabels(context, number) ?: return true
         return labels.any { it in allowed }
-    }
-
-    // a forwarded call is matched to the VoIP.ms number dialled through Inbox's ring broadcast
-    fun ringsVia(context: Context, number: String): Boolean {
-        val did = RingStore.getDid(context.config.normalizeToE164(number)) ?: return false
-        return did in context.config.alwaysRingVia
     }
 
     // Telecom hands screening services the call without its PhoneAccountHandle, so take the line

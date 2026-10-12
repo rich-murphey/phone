@@ -21,7 +21,7 @@ const val HIDE_DIALPAD_NUMBERS = "hide_dialpad_numbers"
 const val ALWAYS_SHOW_FULLSCREEN = "always_show_fullscreen"
 const val SCREENING_LABELS = "screening_labels"
 const val SCREENING_LEVEL_PREFIX = "screening_level_"
-const val ALWAYS_RING_VIA = "always_ring_via"
+const val SCREENED_VOIP_NUMBERS = "screened_voip_numbers"
 
 const val SCREENING_LEVELS = 4
 

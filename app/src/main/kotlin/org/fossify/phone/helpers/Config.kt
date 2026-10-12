@@ -144,13 +144,13 @@ class Config(context: Context) : BaseConfig(context) {
             ?: listOf("Family", "Starred in Android", "", "My Contacts")
         set(screeningLabels) = prefs.edit().putString(SCREENING_LABELS, screeningLabels.joinToString("\n")).apply()
 
-    // VoIP.ms numbers whose forwarded calls ring whatever the line's level, E.164
-    var alwaysRingVia: Set<String>
-        get() = prefs.getStringSet(ALWAYS_RING_VIA, emptySet())!!
-        set(alwaysRingVia) = prefs.edit().putStringSet(ALWAYS_RING_VIA, alwaysRingVia).apply()
+    // VoIP.ms numbers with a screening level of their own for the calls they forward, E.164
+    var screenedVoipNumbers: Set<String>
+        get() = prefs.getStringSet(SCREENED_VOIP_NUMBERS, emptySet())!!
+        set(screenedVoipNumbers) = prefs.edit().putStringSet(SCREENED_VOIP_NUMBERS, screenedVoipNumbers).apply()
 
-    fun getScreeningLevel(handle: PhoneAccountHandle) = prefs.getInt(SCREENING_LEVEL_PREFIX + handle.id, 0)
+    // keyed by a SIM line's PhoneAccountHandle id or a VoIP.ms number
+    fun getScreeningLevel(key: String) = prefs.getInt(SCREENING_LEVEL_PREFIX + key, 0)
 
-    fun setScreeningLevel(handle: PhoneAccountHandle, level: Int) =
-        prefs.edit().putInt(SCREENING_LEVEL_PREFIX + handle.id, level).apply()
+    fun setScreeningLevel(key: String, level: Int) = prefs.edit().putInt(SCREENING_LEVEL_PREFIX + key, level).apply()
 }
