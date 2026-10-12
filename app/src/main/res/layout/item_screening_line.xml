@@ -9,7 +9,6 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <TextView
@@ -18,21 +17,23 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="@dimen/medium_margin" />
 
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/screening_levels"
+        <TextView
+            android:id="@+id/screening_level_description"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            app:selectionRequired="true"
-            app:singleSelection="true" />
+            android:alpha="0.7"
+            android:ellipsize="end"
+            android:gravity="end"
+            android:maxLines="1" />
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/screening_level_description"
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/screening_levels"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:alpha="0.7"
-        android:gravity="end" />
+        app:selectionRequired="true"
+        app:singleSelection="true" />
 
 </LinearLayout>
