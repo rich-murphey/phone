@@ -109,6 +109,8 @@
     <string name="always_ring_via_none">None</string>
     <string name="always_ring_via_hint">Numbers, separated by commas</string>
     <string name="screening_everyone_rings">Everyone rings</string>
+    <string name="screening_nobody">Nobody</string>
+    <string name="screening_nobody_rings">Every call is declined</string>
 
     <!-- FAQ -->
     <string name="faq_1_title">I hear incoming calls, but the screen doesn\'t turn on. What can I do?</string>

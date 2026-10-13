@@ -24,6 +24,8 @@ const val SCREENING_LEVEL_PREFIX = "screening_level_"
 const val SCREENED_VOIP_NUMBERS = "screened_voip_numbers"
 
 const val SCREENING_LEVELS = 4
+// the level past the labels: no caller rings, every call is declined
+const val SCREENING_NOBODY = SCREENING_LEVELS + 1
 
 const val ALL_TABS_MASK = TAB_CONTACTS or TAB_FAVORITES or TAB_CALL_HISTORY
 

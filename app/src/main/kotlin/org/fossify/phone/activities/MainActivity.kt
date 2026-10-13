@@ -52,6 +52,7 @@ import org.fossify.phone.helpers.CallScreening
 import org.fossify.phone.helpers.OPEN_DIAL_PAD_AT_LAUNCH
 import org.fossify.phone.helpers.RecentsHelper
 import org.fossify.phone.helpers.SCREENING_LEVELS
+import org.fossify.phone.helpers.SCREENING_NOBODY
 import org.fossify.phone.helpers.tabsList
 import org.fossify.phone.models.Events
 import org.greenrobot.eventbus.EventBus
@@ -176,10 +177,16 @@ class MainActivity : SimpleActivity() {
             row.screeningLine.text = line.title
             row.screeningLine.setTextColor(textColor)
             row.screeningLevelDescription.setTextColor(textColor)
-            val buttonIds = (0..SCREENING_LEVELS).map { level ->
+            // Nobody sits at the far left, then the labels, and Everyone at the far right
+            val levels = listOf(SCREENING_NOBODY) + (1..SCREENING_LEVELS) + 0
+            val buttonIds = levels.associateWith { level ->
                 MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                     id = View.generateViewId()
-                    text = if (level == 0) getString(R.string.screening_everyone) else labels.getOrNull(level - 1)?.removePrefix("My ")?.substringBefore(' ')?.ifEmpty { null } ?: level.toString()
+                    text = when (level) {
+                        0 -> getString(R.string.screening_everyone)
+                        SCREENING_NOBODY -> getString(R.string.screening_nobody)
+                        else -> labels.getOrNull(level - 1)?.removePrefix("My ")?.substringBefore(' ')?.ifEmpty { null } ?: level.toString()
+                    }
                     minWidth = 0
                     minimumWidth = 0
                     setPadding(0, paddingTop, 0, paddingBottom)
@@ -187,25 +194,28 @@ class MainActivity : SimpleActivity() {
                     backgroundTintList = ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(primaryColor, Color.TRANSPARENT))
                     setTextColor(ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(primaryColor.getContrastColor(), textColor)))
                     strokeColor = ColorStateList.valueOf(textColor.adjustAlpha(0.4f))
-                    // Everyone sits at the far right, after the labels
-                    row.screeningLevels.addView(this, if (level == 0) -1 else level - 1, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                    row.screeningLevels.addView(this, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                 }.id
             }
 
             val level = config.getScreeningLevel(line.key)
-            row.screeningLevels.check(buttonIds[level.coerceIn(0, SCREENING_LEVELS)])
+            row.screeningLevels.check(buttonIds[level] ?: buttonIds.getValue(0))
             row.screeningLevelDescription.text = getScreeningDescription(level)
             row.screeningLevels.addOnButtonCheckedListener { _, checkedId, isChecked ->
                 if (isChecked) {
-                    setScreeningLevel(line, buttonIds.indexOf(checkedId))
-                    row.screeningLevelDescription.text = getScreeningDescription(buttonIds.indexOf(checkedId))
+                    val checkedLevel = buttonIds.entries.first { it.value == checkedId }.key
+                    setScreeningLevel(line, checkedLevel)
+                    row.screeningLevelDescription.text = getScreeningDescription(checkedLevel)
                 }
             }
         }
     }
 
-    private fun getScreeningDescription(level: Int) =
-        if (level == 0) getString(R.string.screening_everyone_rings) else CallScreening.getLevelText(this, level)
+    private fun getScreeningDescription(level: Int) = when (level) {
+        0 -> getString(R.string.screening_everyone_rings)
+        SCREENING_NOBODY -> getString(R.string.screening_nobody_rings)
+        else -> CallScreening.getLevelText(this, level)
+    }
 
     private fun setScreeningLevel(line: CallScreening.Line, level: Int) {
         config.setScreeningLevel(line.key, level)

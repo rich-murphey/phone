@@ -18,7 +18,8 @@ import org.fossify.phone.extensions.config
 import org.fossify.phone.extensions.getAvailableSIMCardLabels
 
 // Per-line whitelist. Each level is a contact label, matched by title across accounts;
-// level n rings for callers carrying any of the first n labels, level 0 rings for everyone.
+// level n rings for callers carrying any of the first n labels, level 0 rings for everyone,
+// and SCREENING_NOBODY for no one.
 // A line is a SIM, or a VoIP.ms number whose forwarded calls are known from Inbox's ring broadcast.
 object CallScreening {
     class Line(val key: String, val title: String)
@@ -54,7 +55,7 @@ object CallScreening {
             return true
         }
 
-        if (number.isNullOrEmpty()) {
+        if (level == SCREENING_NOBODY || number.isNullOrEmpty()) {
             return false
         }
 
@@ -87,6 +88,10 @@ object CallScreening {
     fun getLevelText(context: Context, level: Int): String {
         if (level == 0) {
             return context.getString(R.string.screening_everyone)
+        }
+
+        if (level == SCREENING_NOBODY) {
+            return context.getString(R.string.screening_nobody)
         }
 
         val labels = context.config.screeningLabels.take(level).filter { it.isNotEmpty() }

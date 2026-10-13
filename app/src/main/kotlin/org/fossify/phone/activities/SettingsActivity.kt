@@ -48,6 +48,7 @@ import org.fossify.phone.extensions.launchAccountsConfiguration
 import org.fossify.phone.helpers.CallScreening
 import org.fossify.phone.helpers.RecentsHelper
 import org.fossify.phone.helpers.SCREENING_LEVELS
+import org.fossify.phone.helpers.SCREENING_NOBODY
 import org.fossify.phone.models.RecentCall
 import java.util.Locale
 import kotlin.system.exitProcess
@@ -333,7 +334,7 @@ class SettingsActivity : SimpleActivity() {
     }
 
     private fun pickScreeningLevel(line: CallScreening.Line) {
-        val items = ArrayList((0..SCREENING_LEVELS).map { RadioItem(it, CallScreening.getLevelText(this, it)) })
+        val items = ArrayList(((0..SCREENING_LEVELS) + SCREENING_NOBODY).map { RadioItem(it, CallScreening.getLevelText(this, it)) })
         RadioGroupDialog(this, items, config.getScreeningLevel(line.key)) {
             config.setScreeningLevel(line.key, it as Int)
             if (it > 0) {
