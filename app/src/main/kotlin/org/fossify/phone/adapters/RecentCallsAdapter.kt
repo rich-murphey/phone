@@ -492,6 +492,13 @@ class RecentCallsAdapter(
                     nameToShow = SpannableString("$nameToShow (${call.groupedCalls.size})")
                 }
 
+                // source → destination, the line being Rich's own number
+                if (call.lineNumber.isNotEmpty()) {
+                    nameToShow = SpannableString(
+                        if (call.type == Calls.OUTGOING_TYPE) "${call.lineNumber} → $nameToShow" else "$nameToShow → ${call.lineNumber}"
+                    )
+                }
+
                 if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
                     nameToShow = SpannableString(nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor))
                 }
@@ -556,15 +563,6 @@ class RecentCallsAdapter(
                                 && phoneNumber.countryCodeSource != Phonenumber.PhoneNumber.CountryCodeSource.FROM_DEFAULT_COUNTRY
                                 && (location != locale.displayCountry || matchingContact == null)
                     )
-                }
-
-                itemRecentsNumbers.apply {
-                    val remote = if (formatPhoneNumbers) call.phoneNumber.formatPhoneNumber() else call.phoneNumber
-                    val (source, destination) = if (call.type == Calls.OUTGOING_TYPE) call.lineNumber to remote else remote to call.lineNumber
-                    text = listOf(source, destination).filter { it.isNotEmpty() }.joinToString(" → ")
-                    setTextColor(secondaryTextColor)
-                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
-                    beVisibleIf(text.isNotEmpty())
                 }
 
                 itemRecentsSimImage.beVisibleIf(areMultipleSIMsAvailable && call.simID != -1)
