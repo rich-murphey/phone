@@ -179,7 +179,7 @@ class MainActivity : SimpleActivity() {
             val buttonIds = (0..SCREENING_LEVELS).map { level ->
                 MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                     id = View.generateViewId()
-                    text = if (level == 0) getString(R.string.screening_off) else labels.getOrNull(level - 1)?.substringBefore(' ')?.ifEmpty { null } ?: level.toString()
+                    text = if (level == 0) getString(R.string.screening_everyone) else labels.getOrNull(level - 1)?.removePrefix("My ")?.substringBefore(' ')?.ifEmpty { null } ?: level.toString()
                     minWidth = 0
                     minimumWidth = 0
                     setPadding(0, paddingTop, 0, paddingBottom)
@@ -187,7 +187,8 @@ class MainActivity : SimpleActivity() {
                     backgroundTintList = ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(primaryColor, Color.TRANSPARENT))
                     setTextColor(ColorStateList(arrayOf(checked, intArrayOf()), intArrayOf(primaryColor.getContrastColor(), textColor)))
                     strokeColor = ColorStateList.valueOf(textColor.adjustAlpha(0.4f))
-                    row.screeningLevels.addView(this, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                    // Everyone sits at the far right, after the labels
+                    row.screeningLevels.addView(this, if (level == 0) -1 else level - 1, android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                 }.id
             }
 

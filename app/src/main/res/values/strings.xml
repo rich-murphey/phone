@@ -105,7 +105,6 @@
     <string name="screening_everyone">Everyone</string>
     <string name="screening_level">Level %1$d: %2$s</string>
     <string name="screening_no_label">no label</string>
-    <string name="screening_off">Off</string>
     <string name="always_ring_via">VoIP.ms numbers with their own filter</string>
     <string name="always_ring_via_none">None</string>
     <string name="always_ring_via_hint">Numbers, separated by commas</string>
