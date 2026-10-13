@@ -12,6 +12,7 @@ import org.fossify.commons.helpers.*
 import org.fossify.commons.models.contacts.Contact
 import org.fossify.phone.R
 import org.fossify.phone.activities.SimpleActivity
+import org.fossify.phone.extensions.formatLineNumber
 import org.fossify.phone.extensions.getAvailableSIMCardLabels
 import org.fossify.phone.models.RecentCall
 import org.fossify.phone.models.SIMAccount
@@ -19,6 +20,8 @@ import org.fossify.phone.models.SIMAccount
 class RecentsHelper(private val context: Context) {
     companion object {
         private const val COMPARABLE_PHONE_NUMBER_LENGTH = 9
+        // the line's number as the call log recorded it (CallLog.Calls.PHONE_ACCOUNT_ADDRESS, hidden before API 31)
+        private const val PHONE_ACCOUNT_ADDRESS = "phone_account_address"
         const val QUERY_LIMIT = 100
     }
 
@@ -144,7 +147,8 @@ class RecentsHelper(private val context: Context) {
             Calls.DURATION,
             Calls.TYPE,
             Calls.PHONE_ACCOUNT_ID,
-            Calls.NUMBER_PRESENTATION
+            Calls.NUMBER_PRESENTATION,
+            PHONE_ACCOUNT_ADDRESS
         )
 
         val accountIdToSimAccountMap = HashMap<String, SIMAccount>()
@@ -190,31 +194,32 @@ class RecentsHelper(private val context: Context) {
                     isUnknownNumber = true
                 }
 
-                var name = cursor.getStringValueOrNull(Calls.CACHED_NAME)
-                if (name.isNullOrEmpty() || name == "-1") {
-                    name = number.orEmpty()
-                }
-
-                if (name == number && !isUnknownNumber) {
+                // the contact as it is now, matched on any of its numbers, before the name the log
+                // cached at the time of the call (a contact renamed or merged since)
+                var name = number.orEmpty()
+                if (!isUnknownNumber) {
                     if (contactsNumbersMap.containsKey(number)) {
                         name = contactsNumbersMap[number]!!
                     } else {
-                        val normalizedNumber = number.normalizePhoneNumber()
+                        val normalizedNumber = number!!.normalizePhoneNumber()
                         if (normalizedNumber!!.length >= COMPARABLE_PHONE_NUMBER_LENGTH) {
-                            name = contacts.filter { it.phoneNumbers.isNotEmpty() }.firstOrNull { contact ->
-                                val curNumber = contact.phoneNumbers.first().normalizedNumber
-                                if (curNumber.length >= COMPARABLE_PHONE_NUMBER_LENGTH) {
-                                    if (curNumber.substring(curNumber.length - COMPARABLE_PHONE_NUMBER_LENGTH) == normalizedNumber.substring(
-                                            normalizedNumber.length - COMPARABLE_PHONE_NUMBER_LENGTH
-                                        )
-                                    ) {
-                                        contactsNumbersMap[number] = contact.getNameToDisplay()
-                                        return@firstOrNull true
-                                    }
+                            val tail = normalizedNumber.takeLast(COMPARABLE_PHONE_NUMBER_LENGTH)
+                            contacts.firstOrNull { contact ->
+                                contact.phoneNumbers.any {
+                                    it.normalizedNumber.length >= COMPARABLE_PHONE_NUMBER_LENGTH && it.normalizedNumber.takeLast(COMPARABLE_PHONE_NUMBER_LENGTH) == tail
                                 }
-                                false
-                            }?.name ?: number
+                            }?.let {
+                                name = it.getNameToDisplay()
+                                contactsNumbersMap[number] = name
+                            }
                         }
+                    }
+                }
+
+                if (name == number) {
+                    val cachedName = cursor.getStringValueOrNull(Calls.CACHED_NAME)
+                    if (!cachedName.isNullOrEmpty() && cachedName != "-1") {
+                        name = cachedName
                     }
                 }
 
@@ -273,7 +278,10 @@ class RecentsHelper(private val context: Context) {
                         specificNumber = specificNumber,
                         specificType = specificType,
                         isUnknownNumber = isUnknownNumber,
-                        lineNumber = simAccount?.formattedNumber.orEmpty()
+                        // a SIM since removed is no longer an account, but the log kept its number
+                        lineNumber = simAccount?.formattedNumber?.ifEmpty { null }
+                            ?: cursor.getStringValueOrNull(PHONE_ACCOUNT_ADDRESS)?.takeIf { it.isNotBlank() }?.let { context.formatLineNumber(it) }
+                            ?: ""
                     )
                 )
             } while (cursor.moveToNext() && recentCalls.size < queryLimit)

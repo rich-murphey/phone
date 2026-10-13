@@ -76,7 +76,7 @@ fun Context.getAvailableSIMCardLabels(): List<SIMAccount> {
 }
 
 // subscriptions often store NANP numbers as "15555550100", which formats as "1 555-555-0100" rather than the "+1 555-555-0100" of the caller line
-private fun Context.formatLineNumber(number: String): String {
+fun Context.formatLineNumber(number: String): String {
     if (!config.formatPhoneNumbers) {
         return number
     }
