@@ -272,7 +272,8 @@ class RecentsHelper(private val context: Context) {
                         simColor = simAccount?.color ?: -1,
                         specificNumber = specificNumber,
                         specificType = specificType,
-                        isUnknownNumber = isUnknownNumber
+                        isUnknownNumber = isUnknownNumber,
+                        lineNumber = simAccount?.formattedNumber.orEmpty()
                     )
                 )
             } while (cursor.moveToNext() && recentCalls.size < queryLimit)

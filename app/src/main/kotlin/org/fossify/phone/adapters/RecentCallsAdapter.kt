@@ -558,6 +558,15 @@ class RecentCallsAdapter(
                     )
                 }
 
+                itemRecentsNumbers.apply {
+                    val remote = if (formatPhoneNumbers) call.phoneNumber.formatPhoneNumber() else call.phoneNumber
+                    val (source, destination) = if (call.type == Calls.OUTGOING_TYPE) call.lineNumber to remote else remote to call.lineNumber
+                    text = listOf(source, destination).filter { it.isNotEmpty() }.joinToString(" → ")
+                    setTextColor(secondaryTextColor)
+                    setTextSize(TypedValue.COMPLEX_UNIT_PX, currentFontSize * 0.8f)
+                    beVisibleIf(text.isNotEmpty())
+                }
+
                 itemRecentsSimImage.beVisibleIf(areMultipleSIMsAvailable && call.simID != -1)
                 itemRecentsSimId.beVisibleIf(areMultipleSIMsAvailable && call.simID != -1)
                 if (areMultipleSIMsAvailable && call.simID != -1) {
@@ -658,6 +667,7 @@ class RecentCallsDiffCallback : DiffUtil.ItemCallback<CallLogItem>() {
                         oldItem.specificNumber == newItem.specificNumber &&
                         oldItem.specificType == newItem.specificType &&
                         oldItem.isUnknownNumber == newItem.isUnknownNumber &&
+                        oldItem.lineNumber == newItem.lineNumber &&
                         oldItem.groupedCalls?.size == newItem.groupedCalls?.size
             }
 
