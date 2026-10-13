@@ -492,12 +492,18 @@ class RecentCallsAdapter(
                     nameToShow = SpannableString("$nameToShow (${call.groupedCalls.size})")
                 }
 
-                // source → destination, the line being Rich's own number
-                if (call.lineNumber.isNotEmpty()) {
-                    nameToShow = SpannableString(
-                        if (call.type == Calls.OUTGOING_TYPE) "${call.lineNumber} → $nameToShow" else "$nameToShow → ${call.lineNumber}"
-                    )
-                }
+                // source → destination, the line being Rich's own number; a contact's name comes first
+                val remote = if (formatPhoneNumbers) call.phoneNumber.formatPhoneNumber() else call.phoneNumber
+                val (source, destination) = if (call.type == Calls.OUTGOING_TYPE) call.lineNumber to remote else remote to call.lineNumber
+                val route = listOf(source, destination).filter { it.isNotEmpty() }.joinToString(" → ")
+                nameToShow = SpannableString(
+                    when {
+                        name != call.phoneNumber -> "$nameToShow $route"
+                        call.lineNumber.isEmpty() -> nameToShow.toString()
+                        call.type == Calls.OUTGOING_TYPE -> "${call.lineNumber} → $nameToShow"
+                        else -> "$nameToShow → ${call.lineNumber}"
+                    }
+                )
 
                 if (textToHighlight.isNotEmpty() && nameToShow.contains(textToHighlight, true)) {
                     nameToShow = SpannableString(nameToShow.toString().highlightTextPart(textToHighlight, properPrimaryColor))
