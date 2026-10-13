@@ -168,6 +168,7 @@ class MainActivity : SimpleActivity() {
         val lines = CallScreening.getLines(this)
         val textColor = getProperTextColor()
         val primaryColor = getProperPrimaryColor()
+        val labels = config.screeningLabels
         binding.mainScreeningHolder.removeAllViews()
         binding.mainScreeningHolder.beVisibleIf(lines.isNotEmpty())
         lines.forEach { line ->
@@ -178,7 +179,7 @@ class MainActivity : SimpleActivity() {
             val buttonIds = (0..SCREENING_LEVELS).map { level ->
                 MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                     id = View.generateViewId()
-                    text = if (level == 0) getString(R.string.screening_off) else level.toString()
+                    text = if (level == 0) getString(R.string.screening_off) else labels.getOrNull(level - 1)?.substringBefore(' ')?.ifEmpty { null } ?: level.toString()
                     minWidth = 0
                     minimumWidth = 0
                     setPadding(0, paddingTop, 0, paddingBottom)
