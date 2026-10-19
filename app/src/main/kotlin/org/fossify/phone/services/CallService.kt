@@ -44,6 +44,7 @@ class CallService : InCallService() {
         super.onCallAdded(call)
         // backstop for a call the screening service let through without knowing its line
         if (!call.isOutgoing() && !CallScreening.allows(this, call.details.accountHandle, call.details.handle?.schemeSpecificPart)) {
+            CallScreening.record(this, call.details.accountHandle, call.details.handle?.schemeSpecificPart)
             call.reject(false, null)
             return
         }

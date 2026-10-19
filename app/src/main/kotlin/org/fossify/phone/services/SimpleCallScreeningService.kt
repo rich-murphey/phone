@@ -31,7 +31,7 @@ class SimpleCallScreeningService : CallScreeningService() {
                 screenAfterRing(callDetails, number)
             }
 
-            isIncoming(callDetails) && !CallScreening.allows(this, CallScreening.getRingingLine(this), number) -> {
+            isIncoming(callDetails) && !CallScreening.decide(this, CallScreening.getRingingLine(this), number) -> {
                 decline(callDetails)
             }
 
@@ -72,7 +72,7 @@ class SimpleCallScreeningService : CallScreeningService() {
             responded = true
             RingStore.removeListener(onRing)
             handler.removeCallbacksAndMessages(null)
-            if (CallScreening.allows(this, CallScreening.getRingingLine(this), number)) {
+            if (CallScreening.decide(this, CallScreening.getRingingLine(this), number)) {
                 respondToCall(callDetails, isBlocked = false)
             } else {
                 decline(callDetails)

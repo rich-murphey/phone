@@ -39,6 +39,21 @@ object CallScreening {
         return allowsAt(context, level, number)
     }
 
+    // allows, keeping the level it was decided on for the call screen
+    fun decide(context: Context, handle: PhoneAccountHandle?, number: String?): Boolean {
+        record(context, handle, number)
+        return allows(context, handle, number)
+    }
+
+    fun record(context: Context, handle: PhoneAccountHandle?, number: String?) {
+        if (number.isNullOrEmpty()) {
+            return
+        }
+
+        val key = getLevelKey(context, handle, number)
+        ScreeningStore.put(context.config.normalizeToE164(number), key, key?.let { context.config.getScreeningLevel(it) } ?: 0)
+    }
+
     // whether a ring broadcast still to come could change the answer for this caller
     fun mayDependOnRing(context: Context, handle: PhoneAccountHandle?, number: String?): Boolean {
         val config = context.config

@@ -875,8 +875,12 @@ class CallActivity : SimpleActivity() {
         }
     }
 
+    // a late ring can also fill in a Filter line drawn before screening's decision was known
     private val ringListener = {
-        runOnUiThread { updateCallDestination(CallManager.getPrimaryCall()) }
+        runOnUiThread {
+            updateCallDestination(CallManager.getPrimaryCall())
+            updateCallContactInfo(CallManager.getPrimaryCall())
+        }
     }
 
     private val updateCallDurationTask = object : Runnable {

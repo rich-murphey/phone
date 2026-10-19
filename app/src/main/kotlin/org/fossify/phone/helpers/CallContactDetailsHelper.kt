@@ -242,7 +242,7 @@ private fun getDeviceContactDetails(context: Context, contactId: Int, callingNum
     }
 }
 
-// the caller's contact labels and the called line's screening level
+// the caller's contact labels and the called line's screening level, the one screening applied when known
 private fun getScreening(context: Context, callingNumber: String, line: PhoneAccountHandle?): String {
     val lines = mutableListOf<String>()
     val labels = CallScreening.getCallerLabels(context, callingNumber).orEmpty()
@@ -250,8 +250,15 @@ private fun getScreening(context: Context, callingNumber: String, line: PhoneAcc
         lines.add(context.getString(R.string.contact_labels, labels.sorted().joinToString(", ")))
     }
 
-    CallScreening.getLevelKey(context, line, callingNumber)?.let { key ->
-        lines.add(context.getString(R.string.screening_filter, CallScreening.getLevelText(context, context.config.getScreeningLevel(key))))
+    val decision = callingNumber.takeIf { it.isNotEmpty() }?.let { ScreeningStore.getDecision(context.config.normalizeToE164(it)) }
+    val level = if (decision != null) {
+        decision.levelKey?.let { decision.level }
+    } else {
+        CallScreening.getLevelKey(context, line, callingNumber)?.let { context.config.getScreeningLevel(it) }
+    }
+
+    level?.let {
+        lines.add(context.getString(R.string.screening_filter, CallScreening.getLevelText(context, it)))
     }
 
     return lines.joinToString("\n")
